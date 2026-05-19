@@ -1,0 +1,1603 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <queue>
+#include <algorithm>
+#include <cctype>
+#include <memory>
+#include <sqlite3.h>
+
+// Platform-specific includes
+#ifdef _WIN32
+    #include <conio.h>
+    #include <windows.h>
+#else
+    #include <termios.h>
+    #include <unistd.h>
+    #include <sys/ioctl.h>
+#endif
+
+const int NUM_CATEGORIES = 41;
+const int TOP_N_ITEMS = 10;
+
+
+const std::string DB_PATH = "giftify.db";
+
+using SqliteDbPtr = std::unique_ptr<sqlite3, decltype(&sqlite3_close)>;
+using SqliteStmtPtr = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;
+
+bool tableHasColumn(sqlite3* db, const std::string& table, const std::string& column);
+bool ensureDatabaseCompatibility(sqlite3* db);
+
+// Cross-platform key input function
+char getch_cross() {
+    #ifdef _WIN32
+        return _getch();
+    #else
+        struct termios oldt, newt;
+        char ch;
+        tcgetattr(STDIN_FILENO, &oldt);
+        newt = oldt;
+        newt.c_lflag &= ~(ICANON | ECHO);
+        tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+        ch = getchar();
+        tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+        return ch;
+    #endif
+}
+
+void clearScreen() {
+    #ifdef _WIN32
+        system("cls");
+    #else
+        system("clear");
+    #endif
+}
+
+void printDivider() {
+    std::cout << "========================================" << std::endl;
+}
+
+std::string getSqliteText(sqlite3_stmt* stmt, int column) {
+    const unsigned char* text = sqlite3_column_text(stmt, column);
+    return text ? reinterpret_cast<const char*>(text) : "";
+}
+
+bool prepareSqliteStatement(sqlite3* db, const std::string& query, SqliteStmtPtr& statement) {
+    sqlite3_stmt* raw_statement = nullptr;
+    if (sqlite3_prepare_v2(db, query.c_str(), -1, &raw_statement, nullptr) != SQLITE_OK) {
+        std::cerr << "SQL Error: " << sqlite3_errmsg(db) << std::endl;
+        return false;
+    }
+
+    statement.reset(raw_statement);
+    return true;
+}
+
+struct Item {
+    int item_id;
+    std::string item_name;
+    std::string retailer;
+    std::string associate_link;
+    double price;
+    double scores[NUM_CATEGORIES];
+};
+
+struct RankedItem {
+    int item_id;
+    std::string item_name;
+    std::string retailer;
+    std::string associate_link;
+    double price;
+    double distance_squared; 
+    
+    bool operator>(const RankedItem& other) const {
+        return distance_squared > other.distance_squared;
+    }
+};
+
+double calculateSquaredDistance(const double user_scores[NUM_CATEGORIES], 
+                                const double item_scores[NUM_CATEGORIES], 
+                                const double category_weights[NUM_CATEGORIES]) {
+    double total_distance_squared = 0.0;
+    
+    for (int i = 0; i < NUM_CATEGORIES; i++) {
+        double weighted_user = user_scores[i] * category_weights[i];
+        double weighted_item = item_scores[i];
+        
+        double diff = weighted_user - weighted_item;
+        
+        total_distance_squared += (diff * diff); 
+    }
+    
+    return total_distance_squared;
+}
+
+bool isValidPassword(const std::string& password) { //6 character minimum
+    if (password.length() < 6) {
+        std::cout << "Error: password must be at least 6 characters." << std::endl;
+        return false;
+    }
+    return true;
+}
+
+bool isValidEmail(const std::string& email) {
+    if (email.find("@gmail.com") != std::string::npos ||
+        email.find("@outlook.com") != std::string::npos ||
+        email.find("@linux.com") != std::string::npos) {
+        return true;
+    }
+    std::cout << "Error: invalid domain (use @gmail.com, @outlook.com, @linux.com)" << std::endl;
+    std::cout << "Please enter a valid email address" << std::endl;
+    return false;
+}
+
+void renderSlider(const std::string& category, double &value) {
+    const int BAR_WIDTH = 20;
+    bool adjusting = true;
+
+    while (adjusting) {
+        // Clear line and display instructions
+        std::cout << "\r" << category << " [" ;
+        
+        // Draw the visual bar
+        int pos = static_cast<int>((value / 2.0) * BAR_WIDTH);
+        for (int i = 0; i < BAR_WIDTH; ++i) {
+            if (i < pos) std::cout << "=";
+            else if (i == pos) std::cout << ">";
+            else std::cout << " ";
+        }
+        std::cout << "] " << (int)(value * 50) << "% (A: - | S: + | Enter: Confirm)";
+        std::cout.flush();
+
+        // Handle Input
+        char key = getch_cross(); 
+        if (key == 'a' || key == 'A') {
+            if (value > 0.0) value -= 0.1; // Decrease by 0.1
+        } else if (key == 's' || key == 'S') {
+            if (value < 2.0) value += 0.1; // Increase by 0.1
+        } else if (key == 10 || key == 13) { // 10 is Enter on Unix, 13 is carriage return
+            adjusting = false;
+            std::cout << std::endl; // Move to next line after confirm
+        }
+        // Boundary check
+        if (value < 0) value = 0;
+        if (value > 2.0) value = 2.0;
+    }
+}
+
+
+sqlite3* getDBConnection() {
+    sqlite3* db = nullptr;
+    if (sqlite3_open(DB_PATH.c_str(), &db) != SQLITE_OK) {
+        std::cerr << "Database connection error: "
+                  << (db ? sqlite3_errmsg(db) : "unknown error") << std::endl;
+        if (db) {
+            sqlite3_close(db);
+        }
+        return nullptr;
+    }
+
+    sqlite3_exec(db, "PRAGMA foreign_keys = ON;", nullptr, nullptr, nullptr);
+    if (!ensureDatabaseCompatibility(db)) {
+        sqlite3_close(db);
+        return nullptr;
+    }
+    return db;
+}
+
+struct UserAccount {
+    int user_id;
+    std::string username;
+    std::string email;
+    bool is_admin;
+};
+
+std::string getSqliteValue(sqlite3_stmt* stmt, int column) {
+    switch (sqlite3_column_type(stmt, column)) {
+        case SQLITE_INTEGER:
+            return std::to_string(sqlite3_column_int64(stmt, column));
+        case SQLITE_FLOAT:
+            return std::to_string(sqlite3_column_double(stmt, column));
+        case SQLITE_TEXT:
+            return getSqliteText(stmt, column);
+        case SQLITE_NULL:
+            return "NULL";
+        default:
+            return "";
+    }
+}
+
+bool tableHasColumn(sqlite3* db, const std::string& table, const std::string& column) {
+    SqliteStmtPtr statement(nullptr, sqlite3_finalize);
+    std::string query = "PRAGMA table_info(" + table + ")";
+
+    if (!prepareSqliteStatement(db, query, statement)) {
+        return false;
+    }
+
+    while (sqlite3_step(statement.get()) == SQLITE_ROW) {
+        if (getSqliteText(statement.get(), 1) == column) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ensureDatabaseCompatibility(sqlite3* db) {
+    if (!tableHasColumn(db, "users_login", "is_admin")) {
+        char* error_message = nullptr;
+        if (sqlite3_exec(db,
+                "ALTER TABLE users_login ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0;",
+                nullptr,
+                nullptr,
+                &error_message) != SQLITE_OK) {
+            std::cerr << "Database migration error: "
+                      << (error_message ? error_message : sqlite3_errmsg(db)) << std::endl;
+            if (error_message) {
+                sqlite3_free(error_message);
+            }
+            return false;
+        }
+        if (error_message) {
+            sqlite3_free(error_message);
+        }
+    }
+
+    return true;
+}
+
+std::string buildUserLabel(const UserAccount& user) {
+    return user.username + (user.is_admin ? " [Admin]" : " [User]");
+}
+
+void renderNavigationBar(const std::string& page_name,
+                         const std::string& user_label,
+                         const std::string& actions) {
+    printDivider();
+    std::cout << "Giftify | " << page_name << std::endl;
+    std::cout << "User: " << user_label << std::endl;
+    std::cout << actions << std::endl;
+    printDivider();
+}
+
+struct UserProfile {
+    int profile_id;
+    std::string name;
+    
+    // Sliders (category weights)
+    double electronics_slider;
+    double home_slider;
+    double personal_care_slider;
+    double wearables_slider;
+    double luxury_slider;
+    double children_slider;
+    double pet_slider;
+    double car_slider;
+    double outdoor_slider;
+    double creative_slider;
+    
+    // Electronics (0-8)
+    int computing_devices_score;
+    int peripherals_score;
+    int displays_score;
+    int storage_electronics_score;
+    int audio_score;
+    int video_score;
+    int wearables_tech_score;
+    int accessories_electronics_score;
+    int power_charging_score;
+    
+    // Home (9-13)
+    int furniture_score;
+    int home_decor_score;
+    int storage_home_score;
+    int cleaning_score;
+    int home_organization_score;
+    
+    // Personal Care (14-15)
+    int skincare_score;
+    int personal_hygiene_score;
+    
+    // Fashion (16-19)
+    int men_fashion_score;
+    int women_fashion_score;
+    int children_fashion_score;
+    int fashion_general_score;
+    
+    // Luxury (20-21)
+    int jewelry_score;
+    int luxury_score;
+    
+    // Children & Family (22-25)
+    int toys_score;
+    int educational_toys_score;
+    int games_puzzles_score;
+    int baby_gear_score;
+    
+    // Pets (26-27)
+    int pet_toys_score;
+    int pet_health_score;
+    
+    // Cars & Tools (28-33)
+    int car_accessories_score;
+    int car_vehicle_score;
+    int power_tools_score;
+    int hand_tools_score;
+    int industrial_score;
+    int safety_score;
+    
+    // Outdoors & Creative (34-40)
+    int gardening_supplies_score;
+    int outdoor_score;
+    int camping_score;
+    int fitness_score;
+    int books_score;
+    int music_instruments_score;
+    int movies_media_score;
+};
+
+UserAccount authenticateUser(const std::string& username, const std::string& password) {
+    UserAccount user;
+    user.user_id = -1;
+    user.is_admin = false;
+    
+    SqliteDbPtr db(getDBConnection(), sqlite3_close);
+    if (!db) {
+        std::cerr << "Failed to connect to database." << std::endl;
+        return user;
+    }
+
+    bool has_admin_column = tableHasColumn(db.get(), "users_login", "is_admin");
+
+    SqliteStmtPtr statement(nullptr, sqlite3_finalize);
+    if (has_admin_column) {
+        if (!prepareSqliteStatement(db.get(),
+                "SELECT user_id, username_, email_, is_admin FROM users_login WHERE username_ = ? AND password_ = ?",
+                statement)) {
+            std::cerr << "Authentication query failed." << std::endl;
+            return user;
+        }
+    } else {
+        if (!prepareSqliteStatement(db.get(),
+                "SELECT user_id, username_, email_ FROM users_login WHERE username_ = ? AND password_ = ?",
+                statement)) {
+            std::cerr << "Authentication query failed." << std::endl;
+            return user;
+        }
+    }
+
+    sqlite3_bind_text(statement.get(), 1, username.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(statement.get(), 2, password.c_str(), -1, SQLITE_TRANSIENT);
+
+    if (sqlite3_step(statement.get()) == SQLITE_ROW) {
+        user.user_id = sqlite3_column_int(statement.get(), 0);
+        user.username = getSqliteText(statement.get(), 1);
+        user.email = getSqliteText(statement.get(), 2);
+        user.is_admin = has_admin_column && sqlite3_column_int(statement.get(), 3) == 1;
+    }
+
+    return user;
+}
+
+UserProfile loadUserPreferences(int profile_id, int user_id) {
+    UserProfile profile;
+    profile.profile_id = -1;
+    profile.name = "Default Profile";
+    
+    // Initialize sliders
+    profile.electronics_slider = 0.0;
+    profile.home_slider = 0.0;
+    profile.personal_care_slider = 0.0;
+    profile.wearables_slider = 0.0;
+    profile.luxury_slider = 0.0;
+    profile.children_slider = 0.0;
+    profile.pet_slider = 0.0;
+    profile.car_slider = 0.0;
+    profile.outdoor_slider = 0.0;
+    profile.creative_slider = 0.0;
+    
+    // Initialize all scores to 0
+    profile.computing_devices_score = 0;
+    profile.peripherals_score = 0;
+    profile.displays_score = 0;
+    profile.storage_electronics_score = 0;
+    profile.audio_score = 0;
+    profile.video_score = 0;
+    profile.wearables_tech_score = 0;
+    profile.accessories_electronics_score = 0;
+    profile.power_charging_score = 0;
+    profile.furniture_score = 0;
+    profile.home_decor_score = 0;
+    profile.storage_home_score = 0;
+    profile.cleaning_score = 0;
+    profile.home_organization_score = 0;
+    profile.skincare_score = 0;
+    profile.personal_hygiene_score = 0;
+    profile.men_fashion_score = 0;
+    profile.women_fashion_score = 0;
+    profile.children_fashion_score = 0;
+    profile.fashion_general_score = 0;
+    profile.jewelry_score = 0;
+    profile.luxury_score = 0;
+    profile.toys_score = 0;
+    profile.educational_toys_score = 0;
+    profile.games_puzzles_score = 0;
+    profile.baby_gear_score = 0;
+    profile.pet_toys_score = 0;
+    profile.pet_health_score = 0;
+    profile.car_accessories_score = 0;
+    profile.car_vehicle_score = 0;
+    profile.power_tools_score = 0;
+    profile.hand_tools_score = 0;
+    profile.industrial_score = 0;
+    profile.safety_score = 0;
+    profile.gardening_supplies_score = 0;
+    profile.outdoor_score = 0;
+    profile.camping_score = 0;
+    profile.fitness_score = 0;
+    profile.books_score = 0;
+    profile.music_instruments_score = 0;
+    profile.movies_media_score = 0;
+    
+    SqliteDbPtr db(getDBConnection(), sqlite3_close);
+    if (!db) {
+        std::cerr << "Failed to connect to database." << std::endl;
+        return profile;
+    }
+
+    SqliteStmtPtr statement(nullptr, sqlite3_finalize);
+    if (!prepareSqliteStatement(db.get(),
+            "SELECT profile_id, name_, user_id, "
+            "electronics_slider, home_slider, personal_care_slider, wearables_slider, "
+            "luxury_slider, children_slider, pet_slider, car_slider, outdoor_slider, creative_slider, "
+            "computing_devices_score, peripherals_score, displays_score, storage_electronics_score, "
+            "audio_score, video_score, wearables_tech_score, accessories_electronics_score, power_charging_score, "
+            "furniture_score, home_decor_score, storage_home_score, cleaning_score, home_organization_score, "
+            "skincare_score, personal_hygiene_score, "
+            "men_fashion_score, women_fashion_score, children_fashion_score, fashion_general_score, "
+            "jewelry_score, luxury_score, "
+            "toys_score, educational_toys_score, games_puzzles_score, baby_gear_score, "
+            "pet_toys_score, pet_health_score, "
+            "car_accessories_score, car_vehicle_score, "
+            "power_tools_score, hand_tools_score, industrial_score, safety_score, "
+            "gardening_supplies_score, outdoor_score, camping_score, fitness_score, "
+            "books_score, music_instruments_score, movies_media_score "
+            "FROM user_profiles WHERE profile_id = ?",
+            statement)) {
+        std::cerr << "Query preparation failed." << std::endl;
+        return profile;
+    }
+
+    sqlite3_bind_int(statement.get(), 1, profile_id);
+
+    if (sqlite3_step(statement.get()) == SQLITE_ROW) {
+        int profile_owner_id = sqlite3_column_int(statement.get(), 2);
+        
+        // Verify user owns this profile (FK check)
+        if (profile_owner_id != user_id) {
+            std::cerr << "Access denied: You do not own this profile." << std::endl;
+            return profile;
+        }
+        
+        profile.profile_id = sqlite3_column_int(statement.get(), 0);
+        profile.name = getSqliteText(statement.get(), 1);
+        profile.electronics_slider = sqlite3_column_double(statement.get(), 3);
+        profile.home_slider = sqlite3_column_double(statement.get(), 4);
+        profile.personal_care_slider = sqlite3_column_double(statement.get(), 5);
+        profile.wearables_slider = sqlite3_column_double(statement.get(), 6);
+        profile.luxury_slider = sqlite3_column_double(statement.get(), 7);
+        profile.children_slider = sqlite3_column_double(statement.get(), 8);
+        profile.pet_slider = sqlite3_column_double(statement.get(), 9);
+        profile.car_slider = sqlite3_column_double(statement.get(), 10);
+        profile.outdoor_slider = sqlite3_column_double(statement.get(), 11);
+        profile.creative_slider = sqlite3_column_double(statement.get(), 12);
+        profile.computing_devices_score = sqlite3_column_int(statement.get(), 13);
+        profile.peripherals_score = sqlite3_column_int(statement.get(), 14);
+        profile.displays_score = sqlite3_column_int(statement.get(), 15);
+        profile.storage_electronics_score = sqlite3_column_int(statement.get(), 16);
+        profile.audio_score = sqlite3_column_int(statement.get(), 17);
+        profile.video_score = sqlite3_column_int(statement.get(), 18);
+        profile.wearables_tech_score = sqlite3_column_int(statement.get(), 19);
+        profile.accessories_electronics_score = sqlite3_column_int(statement.get(), 20);
+        profile.power_charging_score = sqlite3_column_int(statement.get(), 21);
+        profile.furniture_score = sqlite3_column_int(statement.get(), 22);
+        profile.home_decor_score = sqlite3_column_int(statement.get(), 23);
+        profile.storage_home_score = sqlite3_column_int(statement.get(), 24);
+        profile.cleaning_score = sqlite3_column_int(statement.get(), 25);
+        profile.home_organization_score = sqlite3_column_int(statement.get(), 26);
+        profile.skincare_score = sqlite3_column_int(statement.get(), 27);
+        profile.personal_hygiene_score = sqlite3_column_int(statement.get(), 28);
+        profile.men_fashion_score = sqlite3_column_int(statement.get(), 29);
+        profile.women_fashion_score = sqlite3_column_int(statement.get(), 30);
+        profile.children_fashion_score = sqlite3_column_int(statement.get(), 31);
+        profile.fashion_general_score = sqlite3_column_int(statement.get(), 32);
+        profile.jewelry_score = sqlite3_column_int(statement.get(), 33);
+        profile.luxury_score = sqlite3_column_int(statement.get(), 34);
+        profile.toys_score = sqlite3_column_int(statement.get(), 35);
+        profile.educational_toys_score = sqlite3_column_int(statement.get(), 36);
+        profile.games_puzzles_score = sqlite3_column_int(statement.get(), 37);
+        profile.baby_gear_score = sqlite3_column_int(statement.get(), 38);
+        profile.pet_toys_score = sqlite3_column_int(statement.get(), 39);
+        profile.pet_health_score = sqlite3_column_int(statement.get(), 40);
+        profile.car_accessories_score = sqlite3_column_int(statement.get(), 41);
+        profile.car_vehicle_score = sqlite3_column_int(statement.get(), 42);
+        profile.power_tools_score = sqlite3_column_int(statement.get(), 43);
+        profile.hand_tools_score = sqlite3_column_int(statement.get(), 44);
+        profile.industrial_score = sqlite3_column_int(statement.get(), 45);
+        profile.safety_score = sqlite3_column_int(statement.get(), 46);
+        profile.gardening_supplies_score = sqlite3_column_int(statement.get(), 47);
+        profile.outdoor_score = sqlite3_column_int(statement.get(), 48);
+        profile.camping_score = sqlite3_column_int(statement.get(), 49);
+        profile.fitness_score = sqlite3_column_int(statement.get(), 50);
+        profile.books_score = sqlite3_column_int(statement.get(), 51);
+        profile.music_instruments_score = sqlite3_column_int(statement.get(), 52);
+        profile.movies_media_score = sqlite3_column_int(statement.get(), 53);
+    }
+
+    return profile;
+}
+
+bool createUserAccount(const std::string& username, const std::string& password, const std::string& email) {
+    SqliteDbPtr db(getDBConnection(), sqlite3_close);
+    if (!db) return false;
+
+    char* error_message = nullptr;
+    if (sqlite3_exec(db.get(), "BEGIN IMMEDIATE TRANSACTION;", nullptr, nullptr, &error_message) != SQLITE_OK) {
+        std::cerr << "SQL Error: " << (error_message ? error_message : sqlite3_errmsg(db.get())) << std::endl;
+        if (error_message) sqlite3_free(error_message);
+        return false;
+    }
+    if (error_message) sqlite3_free(error_message);
+
+    auto rollback = [&]() {
+        sqlite3_exec(db.get(), "ROLLBACK;", nullptr, nullptr, nullptr);
+    };
+
+    SqliteStmtPtr user_statement(nullptr, sqlite3_finalize);
+    if (!prepareSqliteStatement(db.get(),
+            "INSERT INTO users_login (username_, password_, email_) VALUES (?, ?, ?)",
+            user_statement)) {
+        rollback();
+        return false;
+    }
+
+    sqlite3_bind_text(user_statement.get(), 1, username.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(user_statement.get(), 2, password.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(user_statement.get(), 3, email.c_str(), -1, SQLITE_TRANSIENT);
+
+    if (sqlite3_step(user_statement.get()) != SQLITE_DONE) {
+        std::cerr << "SQL Error: " << sqlite3_errmsg(db.get()) << std::endl;
+        rollback();
+        return false;
+    }
+
+    sqlite3_int64 user_id = sqlite3_last_insert_rowid(db.get());
+
+    SqliteStmtPtr profile_statement(nullptr, sqlite3_finalize);
+    if (!prepareSqliteStatement(db.get(),
+            "INSERT INTO user_profiles (name_, user_id) VALUES (?, ?)",
+            profile_statement)) {
+        rollback();
+        return false;
+    }
+
+    std::string profile_name = username + "'s Profile";
+    sqlite3_bind_text(profile_statement.get(), 1, profile_name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int64(profile_statement.get(), 2, user_id);
+
+    if (sqlite3_step(profile_statement.get()) != SQLITE_DONE) {
+        std::cerr << "SQL Error: " << sqlite3_errmsg(db.get()) << std::endl;
+        rollback();
+        return false;
+    }
+
+    if (sqlite3_exec(db.get(), "COMMIT;", nullptr, nullptr, &error_message) != SQLITE_OK) {
+        std::cerr << "SQL Error: " << (error_message ? error_message : sqlite3_errmsg(db.get())) << std::endl;
+        if (error_message) sqlite3_free(error_message);
+        rollback();
+        return false;
+    }
+    if (error_message) sqlite3_free(error_message);
+
+    return true;
+}
+
+bool usernameExists(const std::string& username) {
+    SqliteDbPtr db(getDBConnection(), sqlite3_close);
+    if (!db) return false;
+
+    SqliteStmtPtr statement(nullptr, sqlite3_finalize);
+    if (!prepareSqliteStatement(db.get(),
+            "SELECT COUNT(*) FROM users_login WHERE username_ = ?",
+            statement)) {
+        return false;
+    }
+
+    sqlite3_bind_text(statement.get(), 1, username.c_str(), -1, SQLITE_TRANSIENT);
+
+    if (sqlite3_step(statement.get()) == SQLITE_ROW) {
+        int count = sqlite3_column_int(statement.get(), 0);
+        return count > 0;
+    }
+
+    return false;
+}
+
+UserAccount promptForSignIn() {
+    UserAccount user;
+    user.user_id = -1;
+    std::string username, password;
+    
+    printDivider();
+    std::cout << "         GIFTIFY - SIGN IN" << std::endl;
+    printDivider();
+    renderNavigationBar("Sign In", "Guest", "[1] Sign In   [2] Create Account   [X] Exit");
+    std::cout << std::endl;
+    
+    bool authenticated = false;
+    int attempts = 0;
+    const int MAX_ATTEMPTS = 3;
+    
+    while (!authenticated && attempts < MAX_ATTEMPTS) {
+        std::cout << "Enter username: ";
+        std::getline(std::cin, username);
+        
+        std::cout << "Enter password: ";
+        std::getline(std::cin, password);
+        
+        user = authenticateUser(username, password);
+        
+        if (user.user_id != -1) {
+            authenticated = true;
+            std::cout << "\nLogin successful! Welcome, " << username << "!" << std::endl;
+        } else {
+            ++attempts;
+            if (attempts < MAX_ATTEMPTS) {
+                std::cout << "Invalid username or password. Attempts remaining: " 
+                         << (MAX_ATTEMPTS - attempts) << std::endl << std::endl;
+            } else {
+                std::cout << "Too many failed attempts. Exiting..." << std::endl << std::endl;
+            }
+        }
+    }
+    
+    return user;
+}
+
+UserAccount promptForSignUp() {
+    UserAccount user;
+    user.user_id = -1;
+    std::string username, password, email, confirm_password;
+    
+    printDivider();
+    std::cout << "      GIFTIFY - CREATE ACCOUNT" << std::endl;
+    printDivider();
+    renderNavigationBar("Create Account", "Guest", "[1] Sign In   [2] Create Account   [X] Exit");
+    std::cout << std::endl;
+    
+    bool username_valid = false;
+    while (!username_valid) {
+        std::cout << "Enter username: ";
+        std::getline(std::cin, username);
+        
+        if (username.length() < 3) {
+            std::cout << "Error: at least 3 characters (letters, numbers, special characters)" << std::endl;
+        } else if (usernameExists(username)) {
+            std::cout << "Error: Username already exists. Please choose another." << std::endl;
+        } else {
+            username_valid = true;
+        }
+    }
+    
+    bool email_valid = false;
+    while (!email_valid) {
+        std::cout << "Enter email: ";
+        std::getline(std::cin, email);
+        email_valid = isValidEmail(email);
+    }
+    
+    bool password_valid = false;
+    while (!password_valid) {
+        std::cout << "Enter password: ";
+        std::getline(std::cin, password);
+        password_valid = isValidPassword(password);
+    }
+    
+    bool password_match = false;
+    while (!password_match) {
+        std::cout << "Confirm password: ";
+        std::getline(std::cin, confirm_password);
+        
+        if (password == confirm_password) {
+            password_match = true;
+        } else {
+            std::cout << "Error: Passwords do not match. Try again." << std::endl;
+        }
+    }
+    
+    if (createUserAccount(username, password, email)) {
+        std::cout << "\nAccount created successfully! Please log in." << std::endl;
+        user = authenticateUser(username, password);
+    } else {
+        std::cout << "\nFailed to create account. Please try again." << std::endl;
+    }
+    
+    return user;
+}
+
+UserAccount handleAuthentication() {
+    UserAccount user;
+    user.user_id = -1;
+    
+    while (user.user_id == -1) { //add forgot passwrod or email function
+         printDivider();
+        std::cout << "         GIFTIFY - WELCOME" << std::endl;
+        printDivider();
+    renderNavigationBar("Welcome", "Guest", "[1] Sign In   [2] Create Account   [X] Exit");
+        std::cout << std::endl;
+        std::cout << "[1] Sign In" << std::endl;
+        std::cout << "[2] Create Account" << std::endl;
+        std::cout << "[X] Exit" << std::endl;
+        std::cout << std::endl;
+        printDivider();
+        std::cout << "Select an option (1-2, X to exit): ";
+        
+        std::string choice;
+        std::getline(std::cin, choice);
+        
+        if (choice == "1") {
+            user = promptForSignIn();
+        } else if (choice == "2") {
+            user = promptForSignUp();
+        } else if (choice == "X" || choice == "x") {
+            std::cout << "Thank you for using Giftify. Goodbye!" << std::endl;
+            exit(0);
+        } else {
+            std::cout << "Invalid option. Please try again." << std::endl << std::endl;
+        }
+    }
+    
+    return user;
+}
+
+std::vector<UserProfile> getUserProfiles(int user_id) {
+    std::vector<UserProfile> profiles;
+    
+    SqliteDbPtr db(getDBConnection(), sqlite3_close);
+    if (!db) return profiles;
+
+    SqliteStmtPtr statement(nullptr, sqlite3_finalize);
+    if (!prepareSqliteStatement(db.get(),
+            "SELECT profile_id, name_ FROM user_profiles WHERE user_id = ?",
+            statement)) {
+        return profiles;
+    }
+
+    sqlite3_bind_int(statement.get(), 1, user_id);
+
+    while (sqlite3_step(statement.get()) == SQLITE_ROW) {
+        UserProfile profile;
+        profile.profile_id = sqlite3_column_int(statement.get(), 0);
+        profile.name = getSqliteText(statement.get(), 1);
+        profiles.push_back(profile);
+    }
+
+    return profiles;
+}
+
+bool createNewProfile(int user_id, const std::string& profile_name) {
+    SqliteDbPtr db(getDBConnection(), sqlite3_close);
+    if (!db) return false;
+
+    SqliteStmtPtr statement(nullptr, sqlite3_finalize);
+    if (!prepareSqliteStatement(db.get(),
+            "INSERT INTO user_profiles (name_, user_id) VALUES (?, ?)",
+            statement)) {
+        return false;
+    }
+
+    sqlite3_bind_text(statement.get(), 1, profile_name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(statement.get(), 2, user_id);
+
+    if (sqlite3_step(statement.get()) != SQLITE_DONE) {
+        std::cerr << "SQL Error: " << sqlite3_errmsg(db.get()) << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+void runQuiz(UserProfile &profile, const std::string& user_label) {
+    printDivider();
+    std::cout << "         GIFTIFY - PREFERENCE QUIZ" << std::endl;
+    printDivider();
+    renderNavigationBar("Preference Quiz", user_label, "[Enter] Confirm each answer");
+    std::cout << "\nThis 41-question quiz will help us understand what kind of gifts are perfect for this person.\n" << std::endl;
+    
+    std::vector<std::pair<std::string, int*>> questions = {
+        // Electronics (0-8)
+        {"Interest in computing devices (laptops, desktops, tablets)? (1-5): ", &profile.computing_devices_score},
+        {"Interest in computer peripherals (mouse, keyboard, etc.)? (1-5): ", &profile.peripherals_score},
+        {"Interest in displays and monitors? (1-5): ", &profile.displays_score},
+        {"Interest in storage devices (SSDs, hard drives)? (1-5): ", &profile.storage_electronics_score},
+        {"Interest in audio equipment (speakers, headphones)? (1-5): ", &profile.audio_score},
+        {"Interest in video equipment (cameras, projectors)? (1-5): ", &profile.video_score},
+        {"Interest in wearable tech (smartwatches, fitness trackers)? (1-5): ", &profile.wearables_tech_score},
+        {"Interest in tech accessories (cables, chargers, cases)? (1-5): ", &profile.accessories_electronics_score},
+        {"Interest in power and charging solutions? (1-5): ", &profile.power_charging_score},
+        
+        // Home (9-13)
+        {"Interest in furniture? (1-5): ", &profile.furniture_score},
+        {"Interest in home decor and wall art? (1-5): ", &profile.home_decor_score},
+        {"Interest in home storage solutions? (1-5): ", &profile.storage_home_score},
+        {"Interest in cleaning supplies and tools? (1-5): ", &profile.cleaning_score},
+        {"Interest in home organization items? (1-5): ", &profile.home_organization_score},
+        
+        // Personal Care (14-15)
+        {"Interest in skincare products? (1-5): ", &profile.skincare_score},
+        {"Interest in personal hygiene items? (1-5): ", &profile.personal_hygiene_score},
+        
+        // Fashion (16-19)
+        {"Interest in men's fashion and clothing? (1-5): ", &profile.men_fashion_score},
+        {"Interest in women's fashion and clothing? (1-5): ", &profile.women_fashion_score},
+        {"Interest in children's fashion? (1-5): ", &profile.children_fashion_score},
+        {"Interest in general fashion accessories? (1-5): ", &profile.fashion_general_score},
+        
+        // Luxury (20-21)
+        {"Interest in jewelry and watches? (1-5): ", &profile.jewelry_score},
+        {"Interest in luxury and high-end items? (1-5): ", &profile.luxury_score},
+        
+        // Children & Family (22-25)
+        {"Interest in toys and play items? (1-5): ", &profile.toys_score},
+        {"Interest in educational toys? (1-5): ", &profile.educational_toys_score},
+        {"Interest in games and puzzles? (1-5): ", &profile.games_puzzles_score},
+        {"Interest in baby gear and equipment? (1-5): ", &profile.baby_gear_score},
+        
+        // Pets (26-27)
+        {"Interest in pet toys? (1-5): ", &profile.pet_toys_score},
+        {"Interest in pet health and care products? (1-5): ", &profile.pet_health_score},
+        
+        // Cars & Tools (28-33)
+        {"Interest in car accessories? (1-5): ", &profile.car_accessories_score},
+        {"Interest in vehicles and car equipment? (1-5): ", &profile.car_vehicle_score},
+        {"Interest in power tools? (1-5): ", &profile.power_tools_score},
+        {"Interest in hand tools? (1-5): ", &profile.hand_tools_score},
+        {"Interest in industrial equipment? (1-5): ", &profile.industrial_score},
+        {"Interest in safety equipment? (1-5): ", &profile.safety_score},
+        
+        // Outdoors & Creative (34-40)
+        {"Interest in gardening supplies? (1-5): ", &profile.gardening_supplies_score},
+        {"Interest in outdoor equipment? (1-5): ", &profile.outdoor_score},
+        {"Interest in camping gear? (1-5): ", &profile.camping_score},
+        {"Interest in fitness equipment? (1-5): ", &profile.fitness_score},
+        {"Interest in books? (1-5): ", &profile.books_score},
+        {"Interest in musical instruments? (1-5): ", &profile.music_instruments_score},
+        {"Interest in movies and media? (1-5): ", &profile.movies_media_score}
+    };
+    
+    for (size_t i = 0; i < questions.size(); i++) {
+        std::cout << "[" << (i+1) << "/41] " << questions[i].first;
+        
+        int response = 0;
+        while (response < 1 || response > 5) {
+            std::string input;
+            std::getline(std::cin, input);
+            try {
+                response = std::stoi(input);
+                if (response < 1 || response > 5) {
+                    std::cout << "Please enter a number between 1 and 5: ";
+                }
+            } catch (...) {
+                std::cout << "Invalid input. Please enter a number between 1 and 5: ";
+            }
+        }
+        
+        // Map response (1-5) to category score (0-255 scale)
+        // 1->51, 2->102, 3->153, 4->204, 5->255
+        *questions[i].second = response * 51;
+    }
+    
+    // Initialize all sliders to 1.0 (neutral) after quiz
+    profile.electronics_slider = 1.0;
+    profile.home_slider = 1.0;
+    profile.personal_care_slider = 1.0;
+    profile.wearables_slider = 1.0;
+    profile.luxury_slider = 1.0;
+    profile.children_slider = 1.0;
+    profile.pet_slider = 1.0;
+    profile.car_slider = 1.0;
+    profile.outdoor_slider = 1.0;
+    profile.creative_slider = 1.0;
+}
+
+bool saveProfileScores(int profile_id, int user_id, const UserProfile &profile) {
+    SqliteDbPtr db(getDBConnection(), sqlite3_close);
+    if (!db) {
+        std::cerr << "Failed to connect to database." << std::endl;
+        return false;
+    }
+
+    // Verify user owns this profile (FK check)
+    SqliteStmtPtr verify_stmt(nullptr, sqlite3_finalize);
+    if (!prepareSqliteStatement(db.get(),
+            "SELECT user_id FROM user_profiles WHERE profile_id = ?",
+            verify_stmt)) {
+        std::cerr << "Verification query failed." << std::endl;
+        return false;
+    }
+    
+    sqlite3_bind_int(verify_stmt.get(), 1, profile_id);
+    if (sqlite3_step(verify_stmt.get()) != SQLITE_ROW) {
+        std::cerr << "Profile not found." << std::endl;
+        return false;
+    }
+    
+    int stored_user_id = sqlite3_column_int(verify_stmt.get(), 0);
+    if (stored_user_id != user_id) {
+        std::cerr << "Access denied: You do not own this profile." << std::endl;
+        return false;
+    }
+
+    SqliteStmtPtr statement(nullptr, sqlite3_finalize);
+    if (!prepareSqliteStatement(db.get(),
+            "UPDATE user_profiles SET "
+            "electronics_slider = ?, home_slider = ?, personal_care_slider = ?, wearables_slider = ?, "
+            "luxury_slider = ?, children_slider = ?, pet_slider = ?, car_slider = ?, outdoor_slider = ?, "
+            "creative_slider = ?, "
+            "computing_devices_score = ?, peripherals_score = ?, displays_score = ?, storage_electronics_score = ?, "
+            "audio_score = ?, video_score = ?, wearables_tech_score = ?, accessories_electronics_score = ?, power_charging_score = ?, "
+            "furniture_score = ?, home_decor_score = ?, storage_home_score = ?, cleaning_score = ?, home_organization_score = ?, "
+            "skincare_score = ?, personal_hygiene_score = ?, "
+            "men_fashion_score = ?, women_fashion_score = ?, children_fashion_score = ?, fashion_general_score = ?, "
+            "jewelry_score = ?, luxury_score = ?, "
+            "toys_score = ?, educational_toys_score = ?, games_puzzles_score = ?, baby_gear_score = ?, "
+            "pet_toys_score = ?, pet_health_score = ?, "
+            "car_accessories_score = ?, car_vehicle_score = ?, "
+            "power_tools_score = ?, hand_tools_score = ?, industrial_score = ?, safety_score = ?, "
+            "gardening_supplies_score = ?, outdoor_score = ?, camping_score = ?, fitness_score = ?, "
+            "books_score = ?, music_instruments_score = ?, movies_media_score = ? "
+            "WHERE profile_id = ?",
+            statement)) {
+        std::cerr << "Update query preparation failed." << std::endl;
+        return false;
+    }
+
+    int param = 1;
+    // Sliders
+    sqlite3_bind_double(statement.get(), param++, profile.electronics_slider);
+    sqlite3_bind_double(statement.get(), param++, profile.home_slider);
+    sqlite3_bind_double(statement.get(), param++, profile.personal_care_slider);
+    sqlite3_bind_double(statement.get(), param++, profile.wearables_slider);
+    sqlite3_bind_double(statement.get(), param++, profile.luxury_slider);
+    sqlite3_bind_double(statement.get(), param++, profile.children_slider);
+    sqlite3_bind_double(statement.get(), param++, profile.pet_slider);
+    sqlite3_bind_double(statement.get(), param++, profile.car_slider);
+    sqlite3_bind_double(statement.get(), param++, profile.outdoor_slider);
+    sqlite3_bind_double(statement.get(), param++, profile.creative_slider);
+    
+    // All 41 category scores
+    sqlite3_bind_int(statement.get(), param++, profile.computing_devices_score);
+    sqlite3_bind_int(statement.get(), param++, profile.peripherals_score);
+    sqlite3_bind_int(statement.get(), param++, profile.displays_score);
+    sqlite3_bind_int(statement.get(), param++, profile.storage_electronics_score);
+    sqlite3_bind_int(statement.get(), param++, profile.audio_score);
+    sqlite3_bind_int(statement.get(), param++, profile.video_score);
+    sqlite3_bind_int(statement.get(), param++, profile.wearables_tech_score);
+    sqlite3_bind_int(statement.get(), param++, profile.accessories_electronics_score);
+    sqlite3_bind_int(statement.get(), param++, profile.power_charging_score);
+    sqlite3_bind_int(statement.get(), param++, profile.furniture_score);
+    sqlite3_bind_int(statement.get(), param++, profile.home_decor_score);
+    sqlite3_bind_int(statement.get(), param++, profile.storage_home_score);
+    sqlite3_bind_int(statement.get(), param++, profile.cleaning_score);
+    sqlite3_bind_int(statement.get(), param++, profile.home_organization_score);
+    sqlite3_bind_int(statement.get(), param++, profile.skincare_score);
+    sqlite3_bind_int(statement.get(), param++, profile.personal_hygiene_score);
+    sqlite3_bind_int(statement.get(), param++, profile.men_fashion_score);
+    sqlite3_bind_int(statement.get(), param++, profile.women_fashion_score);
+    sqlite3_bind_int(statement.get(), param++, profile.children_fashion_score);
+    sqlite3_bind_int(statement.get(), param++, profile.fashion_general_score);
+    sqlite3_bind_int(statement.get(), param++, profile.jewelry_score);
+    sqlite3_bind_int(statement.get(), param++, profile.luxury_score);
+    sqlite3_bind_int(statement.get(), param++, profile.toys_score);
+    sqlite3_bind_int(statement.get(), param++, profile.educational_toys_score);
+    sqlite3_bind_int(statement.get(), param++, profile.games_puzzles_score);
+    sqlite3_bind_int(statement.get(), param++, profile.baby_gear_score);
+    sqlite3_bind_int(statement.get(), param++, profile.pet_toys_score);
+    sqlite3_bind_int(statement.get(), param++, profile.pet_health_score);
+    sqlite3_bind_int(statement.get(), param++, profile.car_accessories_score);
+    sqlite3_bind_int(statement.get(), param++, profile.car_vehicle_score);
+    sqlite3_bind_int(statement.get(), param++, profile.power_tools_score);
+    sqlite3_bind_int(statement.get(), param++, profile.hand_tools_score);
+    sqlite3_bind_int(statement.get(), param++, profile.industrial_score);
+    sqlite3_bind_int(statement.get(), param++, profile.safety_score);
+    sqlite3_bind_int(statement.get(), param++, profile.gardening_supplies_score);
+    sqlite3_bind_int(statement.get(), param++, profile.outdoor_score);
+    sqlite3_bind_int(statement.get(), param++, profile.camping_score);
+    sqlite3_bind_int(statement.get(), param++, profile.fitness_score);
+    sqlite3_bind_int(statement.get(), param++, profile.books_score);
+    sqlite3_bind_int(statement.get(), param++, profile.music_instruments_score);
+    sqlite3_bind_int(statement.get(), param++, profile.movies_media_score);
+    sqlite3_bind_int(statement.get(), param++, profile_id);
+
+    if (sqlite3_step(statement.get()) != SQLITE_DONE) {
+        std::cerr << "SQL Error: " << sqlite3_errmsg(db.get()) << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+void adjustSliders(UserProfile &profile, const std::string& user_label) {
+    printDivider();
+    std::cout << "      ADJUST YOUR GIFTIFY PREFERENCES" << std::endl;
+    printDivider();
+    renderNavigationBar("Adjust Preferences", user_label, "[A] Decrease   [S] Increase   [Enter] Confirm");
+    std::cout << "\nUse A to decrease, S to increase, Enter to confirm for each category group.\n" << std::endl;
+    std::cout << "Current values: 0 = not important, 1 = neutral, 2 = very important (multiplier)\n" << std::endl;
+    
+    renderSlider("Electronics & Tech   ", profile.electronics_slider);
+    std::cout << "Press Enter to continue to next category: ";
+    std::string dummy;
+    std::getline(std::cin, dummy);
+    
+    renderSlider("Home & Decor         ", profile.home_slider);
+    std::cout << "Press Enter to continue to next category: ";
+    std::getline(std::cin, dummy);
+    
+    renderSlider("Personal Care        ", profile.personal_care_slider);
+    std::cout << "Press Enter to continue to next category: ";
+    std::getline(std::cin, dummy);
+    
+    renderSlider("Fashion & Wearables  ", profile.wearables_slider);
+    std::cout << "Press Enter to continue to next category: ";
+    std::getline(std::cin, dummy);
+    
+    renderSlider("Luxury Items         ", profile.luxury_slider);
+    std::cout << "Press Enter to continue to next category: ";
+    std::getline(std::cin, dummy);
+    
+    renderSlider("Children & Family    ", profile.children_slider);
+    std::cout << "Press Enter to continue to next category: ";
+    std::getline(std::cin, dummy);
+    
+    renderSlider("Pets & Companions    ", profile.pet_slider);
+    std::cout << "Press Enter to continue to next category: ";
+    std::getline(std::cin, dummy);
+    
+    renderSlider("Cars & Tools         ", profile.car_slider);
+    std::cout << "Press Enter to continue to next category: ";
+    std::getline(std::cin, dummy);
+    
+    renderSlider("Outdoor & Fitness    ", profile.outdoor_slider);
+    std::cout << "Press Enter to continue to next category: ";
+    std::getline(std::cin, dummy);
+    
+    renderSlider("Books & Entertainment", profile.creative_slider);
+}
+
+void displayResults(const std::vector<RankedItem> &results, const std::string &profile_name, const std::string& user_label) {
+    printDivider();
+    std::cout << "Profile: " << profile_name << std::endl;
+    printDivider();
+    renderNavigationBar("Recommendations", user_label, "[1] Dashboard   [2] Profiles   [X] Exit");
+    std::cout << "Best Items: " << std::endl;
+    printDivider();
+    std::cout << std::endl;
+    
+    if (results.empty()) {
+        std::cout << "No items found." << std::endl;
+        return;
+    }
+    
+    size_t display_count = std::min(size_t(3), results.size());
+    for (size_t i = 0; i < display_count; i++) {
+        std::cout << "[" << (i+1) << "] " << results[i].item_name << std::endl;
+        std::cout << "    ID: " << results[i].item_id << std::endl;
+        std::cout << "    Retailer: " << results[i].retailer << std::endl;
+        std::cout << "    Price: $" << results[i].price << std::endl;
+        std::cout << "    Link: " << results[i].associate_link << std::endl;
+        std::cout << "    Match Score: " << results[i].distance_squared << std::endl;
+        std::cout << std::endl;
+    }
+    
+    printDivider();
+    std::cout << "Press Enter to return to the dashboard: ";
+    std::string input;
+    std::getline(std::cin, input);
+}
+
+void ensureAdminExists() {
+    const std::string adminUser = "admin";
+    const std::string adminPass = "admin123";
+    const std::string adminEmail = "admin@example.com";
+
+    if (!usernameExists(adminUser)) {
+        if (createUserAccount(adminUser, adminPass, adminEmail)) {
+            std::cout << "Admin account created: " << adminUser << std::endl;
+        } else {
+            std::cerr << "Failed to create admin account." << std::endl;
+        }
+    }
+}
+
+UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
+    while (true) {
+        printDivider();
+        std::cout << "Loading preferences for: " << user.username << std::endl;
+        printDivider();
+        renderNavigationBar("Profile Selection", buildUserLabel(user), "[N] Create Profile   [X] Exit");
+        std::cout << std::endl;
+        
+        std::vector<UserProfile> profiles = getUserProfiles(user_id);
+        
+        std::cout << "Select a profile:" << std::endl;
+        for (size_t i = 0; i < profiles.size(); i++) {
+            std::cout << "[" << (i+1) << "] " << profiles[i].name << std::endl;
+        }
+        std::cout << "[N] Create Profile" << std::endl;
+        std::cout << "[X] Exit" << std::endl;
+        std::cout << std::endl;
+        printDivider();
+        std::cout << "Select an option: ";
+        
+        std::string choice;
+        std::getline(std::cin, choice);
+        
+        if (choice == "X" || choice == "x") {
+            std::cout << "Thank you for using Giftify. Goodbye!" << std::endl;
+            exit(0);
+        } else if (choice == "N" || choice == "n") {
+            std::cout << "Enter new profile name: ";
+            std::string profile_name;
+            std::getline(std::cin, profile_name);
+            
+            if (createNewProfile(user_id, profile_name)) {
+                std::cout << "Profile created successfully!" << std::endl;
+                continue;
+            } else {
+                std::cout << "Failed to create profile." << std::endl;
+                continue;
+            }
+        } else {
+            try {
+                int selection = std::stoi(choice) - 1;
+                if (selection >= 0 && selection < (int)profiles.size()) {
+                    UserProfile selected = loadUserPreferences(profiles[selection].profile_id, user_id);
+                    return selected;
+                } else {
+                    std::cout << "Invalid selection. Please try again." << std::endl;
+                }
+            } catch (...) {
+                std::cout << "Invalid option. Please try again." << std::endl;
+            }
+        }
+    }
+}
+
+std::vector<Item> loadItemsFromDatabase() {
+    std::vector<Item> items;
+    
+    SqliteDbPtr db(getDBConnection(), sqlite3_close);
+    if (!db) {
+        std::cerr << "Failed to connect to database for loading items." << std::endl;
+        return items;
+    }
+    
+    SqliteStmtPtr statement(nullptr, sqlite3_finalize);
+    if (!prepareSqliteStatement(db.get(),
+            "SELECT item_id, item_name, retailer, associate_link, price, "
+            "computing_devices_score, peripherals_score, displays_score, storage_electronics_score, "
+            "audio_score, video_score, wearables_tech_score, accessories_electronics_score, power_charging_score, "
+            "furniture_score, home_decor_score, storage_home_score, cleaning_score, home_organization_score, "
+            "skincare_score, personal_hygiene_score, "
+            "men_fashion_score, women_fashion_score, children_fashion_score, fashion_general_score, "
+            "jewelry_score, luxury_score, "
+            "toys_score, educational_toys_score, games_puzzles_score, baby_gear_score, "
+            "pet_toys_score, pet_health_score, "
+            "car_accessories_score, car_vehicle_score, "
+            "power_tools_score, hand_tools_score, industrial_score, safety_score, "
+            "gardening_supplies_score, outdoor_score, camping_score, fitness_score, "
+            "books_score, music_instruments_score, movies_media_score "
+            "FROM items",
+            statement)) {
+        std::cerr << "Failed to prepare query for loading items." << std::endl;
+        return items;
+    }
+    
+    while (sqlite3_step(statement.get()) == SQLITE_ROW) {
+        Item item;
+        item.item_id = sqlite3_column_int(statement.get(), 0);
+        item.item_name = getSqliteText(statement.get(), 1);
+        item.retailer = getSqliteText(statement.get(), 2);
+        item.associate_link = getSqliteText(statement.get(), 3);
+        item.price = sqlite3_column_double(statement.get(), 4);
+        
+        // Load all 41 category scores
+        for (int i = 0; i < NUM_CATEGORIES; i++) {
+            item.scores[i] = sqlite3_column_double(statement.get(), 5 + i) / 255.0;
+        }
+        
+        items.push_back(item);
+    }
+    
+    if (items.empty()) {
+        std::cout << "Warning: No items found in database. Please populate the items table." << std::endl;
+    }
+    
+    return items;
+}
+
+std::vector<RankedItem> buildRecommendations(const UserProfile& user_profile) {
+    double weights[NUM_CATEGORIES];
+    double user_vector[NUM_CATEGORIES];
+
+    weights[0] = (user_profile.computing_devices_score / 255.0) * user_profile.electronics_slider;
+    weights[1] = (user_profile.peripherals_score / 255.0) * user_profile.electronics_slider;
+    weights[2] = (user_profile.displays_score / 255.0) * user_profile.electronics_slider;
+    weights[3] = (user_profile.storage_electronics_score / 255.0) * user_profile.electronics_slider;
+    weights[4] = (user_profile.audio_score / 255.0) * user_profile.electronics_slider;
+    weights[5] = (user_profile.video_score / 255.0) * user_profile.electronics_slider;
+    weights[6] = (user_profile.wearables_tech_score / 255.0) * user_profile.electronics_slider;
+    weights[7] = (user_profile.accessories_electronics_score / 255.0) * user_profile.electronics_slider;
+    weights[8] = (user_profile.power_charging_score / 255.0) * user_profile.electronics_slider;
+
+    weights[9] = (user_profile.furniture_score / 255.0) * user_profile.home_slider;
+    weights[10] = (user_profile.home_decor_score / 255.0) * user_profile.home_slider;
+    weights[11] = (user_profile.storage_home_score / 255.0) * user_profile.home_slider;
+    weights[12] = (user_profile.cleaning_score / 255.0) * user_profile.home_slider;
+    weights[13] = (user_profile.home_organization_score / 255.0) * user_profile.home_slider;
+
+    weights[14] = (user_profile.skincare_score / 255.0) * user_profile.personal_care_slider;
+    weights[15] = (user_profile.personal_hygiene_score / 255.0) * user_profile.personal_care_slider;
+
+    weights[16] = (user_profile.men_fashion_score / 255.0) * user_profile.wearables_slider;
+    weights[17] = (user_profile.women_fashion_score / 255.0) * user_profile.wearables_slider;
+    weights[18] = (user_profile.children_fashion_score / 255.0) * user_profile.wearables_slider;
+    weights[19] = (user_profile.fashion_general_score / 255.0) * user_profile.wearables_slider;
+
+    weights[20] = (user_profile.jewelry_score / 255.0) * user_profile.luxury_slider;
+    weights[21] = (user_profile.luxury_score / 255.0) * user_profile.luxury_slider;
+
+    weights[22] = (user_profile.toys_score / 255.0) * user_profile.children_slider;
+    weights[23] = (user_profile.educational_toys_score / 255.0) * user_profile.children_slider;
+    weights[24] = (user_profile.games_puzzles_score / 255.0) * user_profile.children_slider;
+    weights[25] = (user_profile.baby_gear_score / 255.0) * user_profile.children_slider;
+
+    weights[26] = (user_profile.pet_toys_score / 255.0) * user_profile.pet_slider;
+    weights[27] = (user_profile.pet_health_score / 255.0) * user_profile.pet_slider;
+
+    weights[28] = (user_profile.car_accessories_score / 255.0) * user_profile.car_slider;
+    weights[29] = (user_profile.car_vehicle_score / 255.0) * user_profile.car_slider;
+    weights[30] = (user_profile.power_tools_score / 255.0) * user_profile.car_slider;
+    weights[31] = (user_profile.hand_tools_score / 255.0) * user_profile.car_slider;
+    weights[32] = (user_profile.industrial_score / 255.0) * user_profile.car_slider;
+    weights[33] = (user_profile.safety_score / 255.0) * user_profile.car_slider;
+
+    weights[34] = (user_profile.gardening_supplies_score / 255.0) * user_profile.outdoor_slider;
+    weights[35] = (user_profile.outdoor_score / 255.0) * user_profile.outdoor_slider;
+    weights[36] = (user_profile.camping_score / 255.0) * user_profile.outdoor_slider;
+    weights[37] = (user_profile.fitness_score / 255.0) * user_profile.outdoor_slider;
+    weights[38] = (user_profile.books_score / 255.0) * user_profile.creative_slider;
+    weights[39] = (user_profile.music_instruments_score / 255.0) * user_profile.creative_slider;
+    weights[40] = (user_profile.movies_media_score / 255.0) * user_profile.creative_slider;
+
+    for (int i = 0; i < NUM_CATEGORIES; i++) {
+        user_vector[i] = weights[i];
+    }
+
+    std::vector<Item> database = loadItemsFromDatabase();
+    std::priority_queue<RankedItem, std::vector<RankedItem>, std::greater<RankedItem>> top_items;
+
+    for (const Item& item : database) {
+        double distance_sq = calculateSquaredDistance(user_vector, item.scores, weights);
+
+        if (top_items.size() < TOP_N_ITEMS) {
+            top_items.push({item.item_id, item.item_name, item.retailer,
+                           item.associate_link, item.price, distance_sq});
+        } else if (distance_sq < top_items.top().distance_squared) {
+            top_items.pop();
+            top_items.push({item.item_id, item.item_name, item.retailer,
+                           item.associate_link, item.price, distance_sq});
+        }
+    }
+
+    std::vector<RankedItem> results;
+    while (!top_items.empty()) {
+        results.push_back(top_items.top());
+        top_items.pop();
+    }
+
+    std::reverse(results.begin(), results.end());
+    return results;
+}
+
+bool displayQueryResults(const std::string& title, const std::string& query) {
+    SqliteDbPtr db(getDBConnection(), sqlite3_close);
+    if (!db) {
+        std::cerr << "Failed to connect to database." << std::endl;
+        return false;
+    }
+
+    SqliteStmtPtr statement(nullptr, sqlite3_finalize);
+    if (!prepareSqliteStatement(db.get(), query, statement)) {
+        std::cerr << "Failed to prepare query." << std::endl;
+        return false;
+    }
+
+    int column_count = sqlite3_column_count(statement.get());
+    std::vector<std::string> column_names;
+    column_names.reserve(column_count);
+    for (int i = 0; i < column_count; i++) {
+        column_names.push_back(sqlite3_column_name(statement.get(), i));
+    }
+
+    printDivider();
+    std::cout << title << std::endl;
+    printDivider();
+
+    for (int i = 0; i < column_count; i++) {
+        std::cout << column_names[i];
+        if (i + 1 < column_count) {
+            std::cout << " | ";
+        }
+    }
+    std::cout << std::endl;
+    printDivider();
+
+    bool has_rows = false;
+    while (sqlite3_step(statement.get()) == SQLITE_ROW) {
+        has_rows = true;
+        for (int i = 0; i < column_count; i++) {
+            std::cout << getSqliteValue(statement.get(), i);
+            if (i + 1 < column_count) {
+                std::cout << " | ";
+            }
+        }
+        std::cout << std::endl;
+    }
+
+    if (!has_rows) {
+        std::cout << "No records found." << std::endl;
+    }
+
+    return true;
+}
+
+std::string trimCopy(const std::string& input) {
+    size_t start = input.find_first_not_of(" \t\r\n");
+    if (start == std::string::npos) {
+        return "";
+    }
+
+    size_t end = input.find_last_not_of(" \t\r\n");
+    return input.substr(start, end - start + 1);
+}
+
+bool isAllowedAdminQuery(const std::string& query) {
+    std::string trimmed = trimCopy(query);
+    if (trimmed.empty()) {
+        return false;
+    }
+
+    std::string upper = trimmed;
+    std::transform(upper.begin(), upper.end(), upper.begin(), [](unsigned char c) {
+        return static_cast<char>(std::toupper(c));
+    });
+
+    if (upper.rfind("SELECT", 0) != 0) {
+        return false;
+    }
+
+    if (upper.find("USERS_LOGIN") == std::string::npos &&
+        upper.find("USER_PROFILES") == std::string::npos &&
+        upper.find("ITEMS") == std::string::npos) {
+        return false;
+    }
+
+    return true;
+}
+
+void runAdminQueryConsole(const UserAccount& user) {
+    while (true) {
+        clearScreen();
+        renderNavigationBar("Admin Query Runner", buildUserLabel(user), "[1] users_login   [2] user_profiles   [3] items   [4] Custom SELECT   [B] Back   [X] Exit");
+        std::cout << "Run read-only queries against the database." << std::endl;
+        std::cout << "[1] users_login" << std::endl;
+        std::cout << "[2] user_profiles" << std::endl;
+        std::cout << "[3] items" << std::endl;
+        std::cout << "[4] Custom SELECT query" << std::endl;
+        std::cout << "[B] Back to admin menu" << std::endl;
+        std::cout << "[X] Exit" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Select an option: ";
+
+        std::string choice;
+        std::getline(std::cin, choice);
+
+        if (choice == "1" || choice == "2" || choice == "3") {
+            std::string table_name;
+            if (choice == "1") {
+                table_name = "users_login";
+            } else if (choice == "2") {
+                table_name = "user_profiles";
+            } else {
+                table_name = "items";
+            }
+
+            std::cout << "Enter optional SQL clause after the table name (blank for all rows)." << std::endl;
+            std::cout << "Example: WHERE user_id = 1 ORDER BY profile_id DESC LIMIT 10" << std::endl;
+            std::cout << "Clause: ";
+            std::string clause;
+            std::getline(std::cin, clause);
+
+            std::string query = "SELECT * FROM " + table_name;
+            if (!trimCopy(clause).empty()) {
+                query += " ";
+                query += clause;
+            }
+
+            if (!displayQueryResults(table_name, query)) {
+                std::cout << "Query failed." << std::endl;
+            }
+
+            std::cout << "Press Enter to return: ";
+            std::getline(std::cin, choice);
+        } else if (choice == "4") {
+            std::cout << "Enter a read-only SELECT query." << std::endl;
+            std::cout << "It must reference users_login, user_profiles, or items." << std::endl;
+            std::cout << "Query: ";
+            std::string query;
+            std::getline(std::cin, query);
+
+            if (!isAllowedAdminQuery(query)) {
+                std::cout << "Only SELECT queries on the three Giftify tables are allowed." << std::endl;
+            } else if (!displayQueryResults("Custom Query", query)) {
+                std::cout << "Query failed." << std::endl;
+            }
+
+            std::cout << "Press Enter to return: ";
+            std::getline(std::cin, choice);
+        } else if (choice == "B" || choice == "b") {
+            return;
+        } else if (choice == "X" || choice == "x") {
+            exit(0);
+        } else {
+            std::cout << "Invalid option. Please try again." << std::endl;
+            std::cout << "Press Enter to continue: ";
+            std::getline(std::cin, choice);
+        }
+    }
+}
+
+void runAdminConsole(const UserAccount& user) {
+    while (true) {
+        clearScreen();
+        renderNavigationBar("Admin Console", buildUserLabel(user), "[1] Query / Table Viewer   [B] Back   [X] Exit");
+        std::cout << "Choose an admin tool." << std::endl;
+        std::cout << "[1] Query / Table Viewer" << std::endl;
+        std::cout << "[B] Back to dashboard" << std::endl;
+        std::cout << "[X] Exit" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Select an option: ";
+
+        std::string choice;
+        std::getline(std::cin, choice);
+
+        if (choice == "1") {
+            runAdminQueryConsole(user);
+        } else if (choice == "B" || choice == "b") {
+            return;
+        } else if (choice == "X" || choice == "x") {
+            exit(0);
+        } else {
+            std::cout << "Invalid option. Please try again." << std::endl;
+            std::cout << "Press Enter to continue: ";
+            std::getline(std::cin, choice);
+        }
+    }
+}
+
+void runUserSession(UserAccount current_user) {
+    UserProfile user_profile = selectOrCreateProfile(current_user.user_id, current_user);
+
+    if (user_profile.profile_id == -1) {
+        return;
+    }
+
+    while (true) {
+        // Check if profile is new (all category scores are 0)
+        int score_sum = user_profile.computing_devices_score + user_profile.peripherals_score +
+                       user_profile.displays_score + user_profile.storage_electronics_score +
+                       user_profile.audio_score + user_profile.video_score + user_profile.wearables_tech_score +
+                       user_profile.accessories_electronics_score + user_profile.power_charging_score +
+                       user_profile.furniture_score + user_profile.home_decor_score + user_profile.storage_home_score +
+                       user_profile.cleaning_score + user_profile.home_organization_score + user_profile.skincare_score +
+                       user_profile.personal_hygiene_score + user_profile.men_fashion_score + user_profile.women_fashion_score +
+                       user_profile.children_fashion_score + user_profile.fashion_general_score + user_profile.jewelry_score +
+                       user_profile.luxury_score + user_profile.toys_score + user_profile.educational_toys_score +
+                       user_profile.games_puzzles_score + user_profile.baby_gear_score + user_profile.pet_toys_score +
+                       user_profile.pet_health_score + user_profile.car_accessories_score + user_profile.car_vehicle_score +
+                       user_profile.power_tools_score + user_profile.hand_tools_score + user_profile.industrial_score +
+                       user_profile.safety_score + user_profile.gardening_supplies_score + user_profile.outdoor_score +
+                       user_profile.camping_score + user_profile.fitness_score + user_profile.books_score +
+                       user_profile.music_instruments_score + user_profile.movies_media_score;
+
+        if (score_sum == 0) {
+            std::cout << "\nIt looks like this is a new profile. Let's set it up!" << std::endl;
+            runQuiz(user_profile, buildUserLabel(current_user));
+            adjustSliders(user_profile, buildUserLabel(current_user));
+
+            if (saveProfileScores(user_profile.profile_id, current_user.user_id, user_profile)) {
+                std::cout << "Profile preferences saved successfully!" << std::endl;
+            } else {
+                std::cout << "Error saving profile preferences." << std::endl;
+            }
+        }
+
+        clearScreen();
+        std::string dashboard_actions = "[1] Recommendations   [2] Edit Preferences   [3] Switch Profile";
+        if (current_user.is_admin) {
+            dashboard_actions += "   [4] Admin Console";
+        }
+        dashboard_actions += "   [L] Logout   [X] Exit";
+        renderNavigationBar("Dashboard", buildUserLabel(current_user), dashboard_actions);
+        std::cout << "Active profile: " << user_profile.name << std::endl;
+        std::cout << std::endl;
+        std::cout << "[1] View recommendations" << std::endl;
+        std::cout << "[2] Edit preferences" << std::endl;
+        std::cout << "[3] Switch profile" << std::endl;
+        if (current_user.is_admin) {
+            std::cout << "[4] Admin console" << std::endl;
+        }
+        std::cout << "[L] Logout" << std::endl;
+        std::cout << "[X] Exit" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Select an option: ";
+
+        std::string choice;
+        std::getline(std::cin, choice);
+
+        if (choice == "1") {
+            std::vector<RankedItem> results = buildRecommendations(user_profile);
+            displayResults(results, user_profile.name, buildUserLabel(current_user));
+        } else if (choice == "2") {
+            runQuiz(user_profile, buildUserLabel(current_user));
+            adjustSliders(user_profile, buildUserLabel(current_user));
+
+            if (saveProfileScores(user_profile.profile_id, current_user.user_id, user_profile)) {
+                std::cout << "Profile preferences saved successfully!" << std::endl;
+            } else {
+                std::cout << "Error saving profile preferences." << std::endl;
+            }
+            std::cout << "Press Enter to return to the dashboard: ";
+            std::getline(std::cin, choice);
+        } else if (choice == "3") {
+            user_profile = selectOrCreateProfile(current_user.user_id, current_user);
+            if (user_profile.profile_id == -1) {
+                return;
+            }
+        } else if (choice == "4" && current_user.is_admin) {
+            runAdminConsole(current_user);
+        } else if (choice == "L" || choice == "l") {
+            return;
+        } else if (choice == "X" || choice == "x") {
+            exit(0);
+        } else {
+            std::cout << "Invalid option. Please try again." << std::endl;
+            std::cout << "Press Enter to continue: ";
+            std::getline(std::cin, choice);
+        }
+    }
+}
+
+int main() {
+    ensureAdminExists();
+    while (true) {
+        UserAccount current_user = handleAuthentication();
+        runUserSession(current_user);
+    }
+
+    return 0;
+}
