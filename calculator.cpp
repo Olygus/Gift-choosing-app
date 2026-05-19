@@ -28,6 +28,7 @@ using SqliteStmtPtr = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>
 
 bool tableHasColumn(sqlite3* db, const std::string& table, const std::string& column);
 bool ensureDatabaseCompatibility(sqlite3* db);
+void runAdminConsole(const UserAccount& user);
 
 // Cross-platform key input function
 char getch_cross() {
@@ -44,6 +45,35 @@ char getch_cross() {
         tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
         return ch;
     #endif
+}
+
+std::string readMaskedInput(const std::string& prompt) {
+    std::string input;
+    std::cout << prompt << " (**): ";
+
+    while (true) {
+        char ch = getch_cross();
+
+        if (ch == 10 || ch == 13) {
+            std::cout << std::endl;
+            break;
+        }
+
+        if (ch == 8 || ch == 127) {
+            if (!input.empty()) {
+                input.pop_back();
+                std::cout << "\b \b" << std::flush;
+            }
+            continue;
+        }
+
+        if (std::isprint(static_cast<unsigned char>(ch))) {
+            input.push_back(ch);
+            std::cout << '*' << std::flush;
+        }
+    }
+
+    return input;
 }
 
 void clearScreen() {
@@ -243,6 +273,32 @@ bool ensureDatabaseCompatibility(sqlite3* db) {
         if (error_message) {
             sqlite3_free(error_message);
         }
+    }
+
+    char* error_message = nullptr;
+    if (sqlite3_exec(db,
+            "CREATE TABLE IF NOT EXISTS sales ("
+            "sale_id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "user_id INTEGER NOT NULL REFERENCES users_login(user_id) ON DELETE CASCADE,"
+            "item_id INTEGER NOT NULL REFERENCES items(item_id) ON DELETE RESTRICT,"
+            "retailer_name VARCHAR(100) NOT NULL,"
+            "sale_price DECIMAL(10, 2) NOT NULL CHECK (sale_price >= 0),"
+            "commission_rate DECIMAL(5, 4) NOT NULL CHECK (commission_rate >= 0 AND commission_rate <= 1),"
+            "profit DECIMAL(10, 2) NOT NULL CHECK (profit >= 0 AND profit <= sale_price),"
+            "sold_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+            ");",
+            nullptr,
+            nullptr,
+            &error_message) != SQLITE_OK) {
+        std::cerr << "Database migration error: "
+                  << (error_message ? error_message : sqlite3_errmsg(db)) << std::endl;
+        if (error_message) {
+            sqlite3_free(error_message);
+        }
+        return false;
+    }
+    if (error_message) {
+        sqlite3_free(error_message);
     }
 
     return true;
@@ -539,7 +595,7 @@ UserProfile loadUserPreferences(int profile_id, int user_id) {
     return profile;
 }
 
-bool createUserAccount(const std::string& username, const std::string& password, const std::string& email) {
+bool createUserAccount(const std::string& username, const std::string& password, const std::string& email, bool is_admin = false) {
     SqliteDbPtr db(getDBConnection(), sqlite3_close);
     if (!db) return false;
 
@@ -556,11 +612,20 @@ bool createUserAccount(const std::string& username, const std::string& password,
     };
 
     SqliteStmtPtr user_statement(nullptr, sqlite3_finalize);
-    if (!prepareSqliteStatement(db.get(),
-            "INSERT INTO users_login (username_, password_, email_) VALUES (?, ?, ?)",
-            user_statement)) {
-        rollback();
-        return false;
+    if (is_admin && tableHasColumn(db.get(), "users_login", "is_admin")) {
+        if (!prepareSqliteStatement(db.get(),
+                "INSERT INTO users_login (username_, password_, email_, is_admin) VALUES (?, ?, ?, 1)",
+                user_statement)) {
+            rollback();
+            return false;
+        }
+    } else {
+        if (!prepareSqliteStatement(db.get(),
+                "INSERT INTO users_login (username_, password_, email_) VALUES (?, ?, ?)",
+                user_statement)) {
+            rollback();
+            return false;
+        }
     }
 
     sqlite3_bind_text(user_statement.get(), 1, username.c_str(), -1, SQLITE_TRANSIENT);
@@ -644,8 +709,7 @@ UserAccount promptForSignIn() {
         std::cout << "Enter username: ";
         std::getline(std::cin, username);
         
-        std::cout << "Enter password: ";
-        std::getline(std::cin, password);
+        password = readMaskedInput("Enter password");
         
         user = authenticateUser(username, password);
         
@@ -700,15 +764,13 @@ UserAccount promptForSignUp() {
     
     bool password_valid = false;
     while (!password_valid) {
-        std::cout << "Enter password: ";
-        std::getline(std::cin, password);
+        password = readMaskedInput("Enter password");
         password_valid = isValidPassword(password);
     }
     
     bool password_match = false;
     while (!password_match) {
-        std::cout << "Confirm password: ";
-        std::getline(std::cin, confirm_password);
+        confirm_password = readMaskedInput("Confirm password");
         
         if (password == confirm_password) {
             password_match = true;
@@ -1111,14 +1173,38 @@ void displayResults(const std::vector<RankedItem> &results, const std::string &p
 void ensureAdminExists() {
     const std::string adminUser = "admin";
     const std::string adminPass = "admin123";
-    const std::string adminEmail = "admin@example.com";
+    const std::string adminEmail = "FarhanIsBest@example.com";
 
     if (!usernameExists(adminUser)) {
-        if (createUserAccount(adminUser, adminPass, adminEmail)) {
+        if (createUserAccount(adminUser, adminPass, adminEmail, true)) {
             std::cout << "Admin account created: " << adminUser << std::endl;
         } else {
             std::cerr << "Failed to create admin account." << std::endl;
         }
+        return;
+    }
+
+    SqliteDbPtr db(getDBConnection(), sqlite3_close);
+    if (!db) {
+        std::cerr << "Failed to connect to database for admin bootstrap." << std::endl;
+        return;
+    }
+
+    char* error_message = nullptr;
+    if (sqlite3_exec(db.get(),
+            "UPDATE users_login SET password_ = 'admin123', email_ = 'FarhanIsBest@example.com', is_admin = 1 WHERE username_ = 'admin';",
+            nullptr,
+            nullptr,
+            &error_message) != SQLITE_OK) {
+        std::cerr << "Failed to update admin account: "
+                  << (error_message ? error_message : sqlite3_errmsg(db.get())) << std::endl;
+        if (error_message) {
+            sqlite3_free(error_message);
+        }
+        return;
+    }
+    if (error_message) {
+        sqlite3_free(error_message);
     }
 }
 
@@ -1127,7 +1213,11 @@ UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
         printDivider();
         std::cout << "Loading preferences for: " << user.username << std::endl;
         printDivider();
-        renderNavigationBar("Profile Selection", buildUserLabel(user), "[N] Create Profile   [X] Exit");
+        std::string actions = "[N] Create Profile   [X] Exit";
+        if (user.is_admin) {
+            actions = "[A] Admin Console   " + actions;
+        }
+        renderNavigationBar("Profile Selection", buildUserLabel(user), actions);
         std::cout << std::endl;
         
         std::vector<UserProfile> profiles = getUserProfiles(user_id);
@@ -1135,6 +1225,9 @@ UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
         std::cout << "Select a profile:" << std::endl;
         for (size_t i = 0; i < profiles.size(); i++) {
             std::cout << "[" << (i+1) << "] " << profiles[i].name << std::endl;
+        }
+        if (user.is_admin) {
+            std::cout << "[A] Admin Console / SQL Tools" << std::endl;
         }
         std::cout << "[N] Create Profile" << std::endl;
         std::cout << "[X] Exit" << std::endl;
@@ -1148,6 +1241,8 @@ UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
         if (choice == "X" || choice == "x") {
             std::cout << "Thank you for using Giftify. Goodbye!" << std::endl;
             exit(0);
+        } else if ((choice == "A" || choice == "a") && user.is_admin) {
+            runAdminConsole(user);
         } else if (choice == "N" || choice == "n") {
             std::cout << "Enter new profile name: ";
             std::string profile_name;
@@ -1365,6 +1460,31 @@ bool displayQueryResults(const std::string& title, const std::string& query) {
     return true;
 }
 
+bool executeAdminSql(const std::string& sql) {
+    SqliteDbPtr db(getDBConnection(), sqlite3_close);
+    if (!db) {
+        std::cerr << "Failed to connect to database." << std::endl;
+        return false;
+    }
+
+    char* error_message = nullptr;
+    if (sqlite3_exec(db.get(), sql.c_str(), nullptr, nullptr, &error_message) != SQLITE_OK) {
+        std::cerr << "SQL Error: "
+                  << (error_message ? error_message : sqlite3_errmsg(db.get())) << std::endl;
+        if (error_message) {
+            sqlite3_free(error_message);
+        }
+        return false;
+    }
+
+    if (error_message) {
+        sqlite3_free(error_message);
+    }
+
+    std::cout << "SQL executed successfully." << std::endl;
+    return true;
+}
+
 std::string trimCopy(const std::string& input) {
     size_t start = input.find_first_not_of(" \t\r\n");
     if (start == std::string::npos) {
@@ -1390,24 +1510,19 @@ bool isAllowedAdminQuery(const std::string& query) {
         return false;
     }
 
-    if (upper.find("USERS_LOGIN") == std::string::npos &&
-        upper.find("USER_PROFILES") == std::string::npos &&
-        upper.find("ITEMS") == std::string::npos) {
-        return false;
-    }
-
     return true;
 }
 
 void runAdminQueryConsole(const UserAccount& user) {
     while (true) {
         clearScreen();
-        renderNavigationBar("Admin Query Runner", buildUserLabel(user), "[1] users_login   [2] user_profiles   [3] items   [4] Custom SELECT   [B] Back   [X] Exit");
+        renderNavigationBar("Admin Query Runner", buildUserLabel(user), "[1] users_login   [2] user_profiles   [3] items   [4] sales   [5] Custom SELECT   [B] Back   [X] Exit");
         std::cout << "Run read-only queries against the database." << std::endl;
         std::cout << "[1] users_login" << std::endl;
         std::cout << "[2] user_profiles" << std::endl;
         std::cout << "[3] items" << std::endl;
-        std::cout << "[4] Custom SELECT query" << std::endl;
+        std::cout << "[4] sales" << std::endl;
+        std::cout << "[5] Custom SELECT query" << std::endl;
         std::cout << "[B] Back to admin menu" << std::endl;
         std::cout << "[X] Exit" << std::endl;
         std::cout << std::endl;
@@ -1416,14 +1531,16 @@ void runAdminQueryConsole(const UserAccount& user) {
         std::string choice;
         std::getline(std::cin, choice);
 
-        if (choice == "1" || choice == "2" || choice == "3") {
+        if (choice == "1" || choice == "2" || choice == "3" || choice == "4") {
             std::string table_name;
             if (choice == "1") {
                 table_name = "users_login";
             } else if (choice == "2") {
                 table_name = "user_profiles";
-            } else {
+            } else if (choice == "3") {
                 table_name = "items";
+            } else {
+                table_name = "sales";
             }
 
             std::cout << "Enter optional SQL clause after the table name (blank for all rows)." << std::endl;
@@ -1444,17 +1561,58 @@ void runAdminQueryConsole(const UserAccount& user) {
 
             std::cout << "Press Enter to return: ";
             std::getline(std::cin, choice);
-        } else if (choice == "4") {
+        } else if (choice == "5") {
             std::cout << "Enter a read-only SELECT query." << std::endl;
-            std::cout << "It must reference users_login, user_profiles, or items." << std::endl;
+            std::cout << "It may reference any table in the database." << std::endl;
             std::cout << "Query: ";
             std::string query;
             std::getline(std::cin, query);
 
             if (!isAllowedAdminQuery(query)) {
-                std::cout << "Only SELECT queries on the three Giftify tables are allowed." << std::endl;
+                std::cout << "Only SELECT queries are allowed." << std::endl;
             } else if (!displayQueryResults("Custom Query", query)) {
                 std::cout << "Query failed." << std::endl;
+            }
+
+            std::cout << "Press Enter to return: ";
+            std::getline(std::cin, choice);
+        } else if (choice == "B" || choice == "b") {
+            return;
+        } else if (choice == "X" || choice == "x") {
+            exit(0);
+        } else {
+            std::cout << "Invalid option. Please try again." << std::endl;
+            std::cout << "Press Enter to continue: ";
+            std::getline(std::cin, choice);
+        }
+    }
+}
+
+void runAdminSqlConsole(const UserAccount& user) {
+    while (true) {
+        clearScreen();
+        renderNavigationBar("Admin SQL Console", buildUserLabel(user), "[1] Execute SQL   [B] Back   [X] Exit");
+        std::cout << "Run SQL statements such as CREATE TABLE, INSERT, UPDATE, DELETE, or ALTER." << std::endl;
+        std::cout << "[1] Execute SQL statement" << std::endl;
+        std::cout << "[B] Back to admin menu" << std::endl;
+        std::cout << "[X] Exit" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Select an option: ";
+
+        std::string choice;
+        std::getline(std::cin, choice);
+
+        if (choice == "1") {
+            std::cout << "Enter SQL statement or script." << std::endl;
+            std::cout << "Example: CREATE TABLE test_table (id INTEGER PRIMARY KEY, name TEXT);" << std::endl;
+            std::cout << "SQL: ";
+            std::string sql;
+            std::getline(std::cin, sql);
+
+            if (trimCopy(sql).empty()) {
+                std::cout << "No SQL entered." << std::endl;
+            } else if (!executeAdminSql(sql)) {
+                std::cout << "SQL execution failed." << std::endl;
             }
 
             std::cout << "Press Enter to return: ";
@@ -1474,9 +1632,10 @@ void runAdminQueryConsole(const UserAccount& user) {
 void runAdminConsole(const UserAccount& user) {
     while (true) {
         clearScreen();
-        renderNavigationBar("Admin Console", buildUserLabel(user), "[1] Query / Table Viewer   [B] Back   [X] Exit");
+        renderNavigationBar("Admin Console", buildUserLabel(user), "[1] Query / Table Viewer   [2] SQL Console   [B] Back   [X] Exit");
         std::cout << "Choose an admin tool." << std::endl;
         std::cout << "[1] Query / Table Viewer" << std::endl;
+        std::cout << "[2] SQL Console" << std::endl;
         std::cout << "[B] Back to dashboard" << std::endl;
         std::cout << "[X] Exit" << std::endl;
         std::cout << std::endl;
@@ -1487,6 +1646,8 @@ void runAdminConsole(const UserAccount& user) {
 
         if (choice == "1") {
             runAdminQueryConsole(user);
+        } else if (choice == "2") {
+            runAdminSqlConsole(user);
         } else if (choice == "B" || choice == "b") {
             return;
         } else if (choice == "X" || choice == "x") {
