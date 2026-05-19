@@ -1,7 +1,7 @@
 
 # Giftify Calculator
 
-A C++17 calculator featuring SQLite3 integration.
+A gift choosing assistant originally created as part of assigment task 3 for enterprise computing made with a C++17 calculator and featuring SQLite3 integration.
 
 ## Compilation Instructions
 
@@ -19,7 +19,7 @@ Ensure you have a C++17 compliant compiler and the SQLite3 development libraries
 3. Run the application:
    ```bash
    ./giftify
-   ``
+   ```
 ### Arch Linux Setup & Compilation
 
 1. Install the GNU Compiler Collection (GCC) and SQLite package:
