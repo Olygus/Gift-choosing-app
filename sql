@@ -136,3 +136,14 @@ CREATE TABLE IF NOT EXISTS items (
     music_instruments_score TINYINT DEFAULT 0 CHECK (music_instruments_score BETWEEN 0 AND 255),
     movies_media_score TINYINT DEFAULT 0 CHECK (movies_media_score BETWEEN 0 AND 255)
 );
+
+CREATE TABLE IF NOT EXISTS sales (
+    sale_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users_login(user_id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(item_id) ON DELETE RESTRICT,
+    retailer_name VARCHAR(100) NOT NULL,
+    sale_price DECIMAL(10, 2) NOT NULL CHECK (sale_price >= 0),
+    commission_rate DECIMAL(5, 4) NOT NULL CHECK (commission_rate >= 0 AND commission_rate <= 1),
+    profit DECIMAL(10, 2) NOT NULL CHECK (profit >= 0 AND profit <= sale_price),
+    sold_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
