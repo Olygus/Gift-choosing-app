@@ -1334,7 +1334,7 @@ void displayResults(const std::vector<RankedItem> &results, const std::string &p
 void ensureAdminExists() {
     const std::string adminUser = "admin";
     const std::string adminPass = "admin123";
-    const std::string adminEmail = "FarhanIsBest@example.com";
+    const std::string adminEmail = "FarhanIsBest@gmail.com";
 
     if (!usernameExists(adminUser)) {
         if (createUserAccount(adminUser, adminPass, adminEmail, true)) {

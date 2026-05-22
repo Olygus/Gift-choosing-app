@@ -483,6 +483,12 @@ def main() -> None:
     conn = sqlite3.connect(args.db_path)
     try:
         conn.execute("PRAGMA foreign_keys = ON")
+        
+        # Initialize database schema from sql file
+        with open("sql", "r") as f:
+            schema = f.read()
+            conn.executescript(schema)
+        
         clear_existing_rows(conn)
         ensure_admin_rows(conn)
 

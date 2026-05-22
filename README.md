@@ -8,13 +8,13 @@ A gift choosing assistant originally created as part of assigment task 3 for ent
 Ensure you have a C++17 compliant compiler and the SQLite3 development libraries installed on your system.
 
 ### Start Here
-1. Clone the repository:
+1. Clone my repositorywith
    ```bash
    git clone https://github.com/Olygus/Gift-choosing-app
    ```
-2. Change into the project folder:
+2. go into the project folder:
    ```bash
-   cd Gift-choosing-app
+   cd Path-to-download-location/Gift-choosing-app
    ```
 
 ### Linux (Ubuntu/Debian)
