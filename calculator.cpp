@@ -50,11 +50,7 @@ char getch_cross() {
 
 std::string readMaskedInput(const std::string& prompt) {
     std::string input;
-<<<<<<< HEAD
-    std::cout << prompt << " (**): ";
-=======
     std::cout << prompt << ": ";
->>>>>>> qt-implementation
 
     while (true) {
         char ch = getch_cross();
@@ -288,6 +284,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     name_ varchar(255) NOT NULL,
     user_id INTEGER NOT NULL REFERENCES users_login(user_id) ON DELETE CASCADE,
 
+    -- Category scores are stored as unsigned bytes, so valid values are 0-255.
     computing_devices_score TINYINT DEFAULT 0 CHECK (computing_devices_score BETWEEN 0 AND 255),
     peripherals_score TINYINT DEFAULT 0 CHECK (peripherals_score BETWEEN 0 AND 255),
     displays_score TINYINT DEFAULT 0 CHECK (displays_score BETWEEN 0 AND 255),
@@ -340,6 +337,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     music_instruments_score TINYINT DEFAULT 0 CHECK (music_instruments_score BETWEEN 0 AND 255),
     movies_media_score TINYINT DEFAULT 0 CHECK (movies_media_score BETWEEN 0 AND 255),
 
+    -- Slider weights use a compact 0.0-2.0 scale.
     electronics_slider DOUBLE DEFAULT 0 CHECK (electronics_slider BETWEEN 0 AND 2),
     home_slider DOUBLE DEFAULT 0 CHECK (home_slider BETWEEN 0 AND 2),
     personal_care_slider DOUBLE DEFAULT 0 CHECK (personal_care_slider BETWEEN 0 AND 2),
@@ -359,6 +357,7 @@ CREATE TABLE IF NOT EXISTS items (
     associate_link TEXT,
     price DECIMAL(10, 2),
 
+    -- Category scores are stored as unsigned bytes, so valid values are 0-255.
     computing_devices_score TINYINT DEFAULT 0 CHECK (computing_devices_score BETWEEN 0 AND 255),
     peripherals_score TINYINT DEFAULT 0 CHECK (peripherals_score BETWEEN 0 AND 255),
     displays_score TINYINT DEFAULT 0 CHECK (displays_score BETWEEN 0 AND 255),
@@ -975,8 +974,10 @@ UserAccount handleAuthentication() {
         std::getline(std::cin, choice);
         
         if (choice == "1") {
+            clearScreen();
             user = promptForSignIn();
         } else if (choice == "2") {
+            clearScreen();
             user = promptForSignUp();
         } else if (choice == "X" || choice == "x") {
             std::cout << "Thank you for using Giftify. Goodbye!" << std::endl;
@@ -1042,6 +1043,7 @@ void runQuiz(UserProfile &profile, const std::string& user_label) {
     printDivider();
     renderNavigationBar("Preference Quiz", user_label, "[Enter] Confirm each answer");
     std::cout << "\nThis 41-question quiz will help us understand what kind of gifts are perfect for this person.\n" << std::endl;
+    std::cout << "Please give each question a rating from 1 to 5 (5 = they really like that, 1 = they would never be caught doing that).\n" << std::endl;
     
     std::vector<std::pair<std::string, int*>> questions = {
         // Electronics (0-8)
@@ -1338,11 +1340,7 @@ void displayResults(const std::vector<RankedItem> &results, const std::string &p
 void ensureAdminExists() {
     const std::string adminUser = "admin";
     const std::string adminPass = "admin123";
-<<<<<<< HEAD
-    const std::string adminEmail = "FarhanIsBest@example.com";
-=======
     const std::string adminEmail = "FarhanIsBest@gmail.com";
->>>>>>> qt-implementation
 
     if (!usernameExists(adminUser)) {
         if (createUserAccount(adminUser, adminPass, adminEmail, true)) {
@@ -1361,7 +1359,7 @@ void ensureAdminExists() {
 
     char* error_message = nullptr;
     if (sqlite3_exec(db.get(),
-            "UPDATE users_login SET password_ = 'admin123', email_ = 'FarhanIsBest@example.com', is_admin = 1 WHERE username_ = 'admin';",
+            "UPDATE users_login SET password_ = 'admin123', email_ = 'FarhanIsBest@gmail.com', is_admin = 1 WHERE username_ = 'admin';",
             nullptr,
             nullptr,
             &error_message) != SQLITE_OK) {
