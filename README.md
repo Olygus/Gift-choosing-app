@@ -7,6 +7,16 @@ A gift choosing assistant originally created as part of assigment task 3 for ent
 
 Ensure you have a C++17 compliant compiler and the SQLite3 development libraries installed on your system.
 
+### Start Here
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Olygus/Gift-choosing-app
+   ```
+2. Change into the project folder:
+   ```bash
+   cd Gift-choosing-app
+   ```
+
 ### Linux (Ubuntu/Debian)
 1. Install dependencies:
    ```bash
@@ -56,3 +66,19 @@ Ensure you have a C++17 compliant compiler and the SQLite3 development libraries
    ```cmd
    giftify.exe
    ```
+
+## Optional: Load Sample Data
+
+If you want a populated with a sanple database to test with, run the sample seeding script before launching the app. This works on Debian/Ubuntu, Arch Linux, and Windows as long as Python 3 is installed:
+
+```bash (Linux based)
+python3 db-generate-sample.py giftify.db
+```
+
+On Windows, use:
+
+```cmd
+python db-generate-sample.py giftify.db
+```
+
+This resets the sample tables and inserts users, profiles, items, and sales data that match the SQLite schema used by the app.
