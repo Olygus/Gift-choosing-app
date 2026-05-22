@@ -50,7 +50,11 @@ char getch_cross() {
 
 std::string readMaskedInput(const std::string& prompt) {
     std::string input;
+<<<<<<< HEAD
     std::cout << prompt << " (**): ";
+=======
+    std::cout << prompt << ": ";
+>>>>>>> qt-implementation
 
     while (true) {
         char ch = getch_cross();
@@ -1334,7 +1338,11 @@ void displayResults(const std::vector<RankedItem> &results, const std::string &p
 void ensureAdminExists() {
     const std::string adminUser = "admin";
     const std::string adminPass = "admin123";
+<<<<<<< HEAD
     const std::string adminEmail = "FarhanIsBest@example.com";
+=======
+    const std::string adminEmail = "FarhanIsBest@gmail.com";
+>>>>>>> qt-implementation
 
     if (!usernameExists(adminUser)) {
         if (createUserAccount(adminUser, adminPass, adminEmail, true)) {
