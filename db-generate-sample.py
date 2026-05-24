@@ -396,10 +396,6 @@ def ensure_admin_rows(conn: sqlite3.Connection) -> None:
         "INSERT OR IGNORE INTO users_login (user_id, username_, password_, email_, is_admin) VALUES (?, ?, ?, ?, 1)",
         (ADMIN_USER_ID, "admin", "admin123", "FarhanIsBest@gmail.com"),
     )
-    conn.execute(
-        "INSERT OR IGNORE INTO user_profiles (profile_id, name_, user_id) VALUES (?, ?, ?)",
-        (ADMIN_PROFILE_ID, "admin", ADMIN_USER_ID),
-    )
 
 
 def build_profile_rows() -> list[tuple]:
