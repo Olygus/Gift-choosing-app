@@ -802,25 +802,7 @@ bool createUserAccount(const std::string& username, const std::string& password,
         return false;
     }
 
-    sqlite3_int64 user_id = sqlite3_last_insert_rowid(db.get());
-
-    SqliteStmtPtr profile_statement(nullptr, sqlite3_finalize);
-    if (!prepareSqliteStatement(db.get(),
-            "INSERT INTO user_profiles (name_, user_id) VALUES (?, ?)",
-            profile_statement)) {
-        rollback();
-        return false;
-    }
-
-    std::string profile_name = username + "'s Profile";
-    sqlite3_bind_text(profile_statement.get(), 1, profile_name.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int64(profile_statement.get(), 2, user_id);
-
-    if (sqlite3_step(profile_statement.get()) != SQLITE_DONE) {
-        std::cerr << "SQL Error: " << sqlite3_errmsg(db.get()) << std::endl;
-        rollback();
-        return false;
-    }
+    // removed a function which creates an empty profile for the new user, as it is useless
 
     if (sqlite3_exec(db.get(), "COMMIT;", nullptr, nullptr, &error_message) != SQLITE_OK) {
         std::cerr << "SQL Error: " << (error_message ? error_message : sqlite3_errmsg(db.get())) << std::endl;
@@ -995,15 +977,37 @@ std::vector<UserProfile> getUserProfiles(int user_id) {
     
     SqliteDbPtr db(getDBConnection(), sqlite3_close);
     if (!db) return profiles;
-
-    SqliteStmtPtr statement(nullptr, sqlite3_finalize);
-    if (!prepareSqliteStatement(db.get(),
-            "SELECT profile_id, name_ FROM user_profiles WHERE user_id = ?",
-            statement)) {
-        return profiles;
+    // reffer to the function loadUserPreferences, we need to get the username of the user to exclude the profile with the same name as the username, which is the default profile created for each user, and is not meant to be used by the user, but is used as a fallback when loading preferences if the user does not have any other profiles
+    //refer to line 805 
+    std::string username;
+    SqliteStmtPtr user_stmt(nullptr, sqlite3_finalize);
+    if (prepareSqliteStatement(db.get(), "SELECT username_ FROM users_login WHERE user_id = ?", user_stmt)) {
+        sqlite3_bind_int(user_stmt.get(), 1, user_id);
+        if (sqlite3_step(user_stmt.get()) == SQLITE_ROW) {
+            username = getSqliteText(user_stmt.get(), 0);
+        }
     }
 
-    sqlite3_bind_int(statement.get(), 1, user_id);
+    std::string exclude_name;
+    if (!username.empty()) exclude_name = username + "'s Profile";
+
+    SqliteStmtPtr statement(nullptr, sqlite3_finalize);
+    if (!exclude_name.empty()) {
+        if (!prepareSqliteStatement(db.get(),
+                "SELECT profile_id, name_ FROM user_profiles WHERE user_id = ? AND name_ != ?",
+                statement)) {
+            return profiles;
+        }
+        sqlite3_bind_int(statement.get(), 1, user_id);
+        sqlite3_bind_text(statement.get(), 2, exclude_name.c_str(), -1, SQLITE_TRANSIENT);
+    } else {
+        if (!prepareSqliteStatement(db.get(),
+                "SELECT profile_id, name_ FROM user_profiles WHERE user_id = ?",
+                statement)) {
+            return profiles;
+        }
+        sqlite3_bind_int(statement.get(), 1, user_id);
+    }
 
     while (sqlite3_step(statement.get()) == SQLITE_ROW) {
         UserProfile profile;
