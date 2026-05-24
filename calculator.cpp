@@ -1903,6 +1903,7 @@ bool displayQueryResults(const std::string& title, const std::string& query) {
             std::string choice;
             std::getline(std::cin, choice);
             if (choice == "B" || choice == "b") {
+                clearScreen();
                 break;
             }
         } else {
@@ -2032,6 +2033,7 @@ void runAdminQueryConsole(const UserAccount& user) {
             std::cout << "Press Enter to return: ";
             std::getline(std::cin, choice);
         } else if (choice == "B" || choice == "b") {
+            clearScreen();
             return;
         } else if (choice == "X" || choice == "x") {
             exit(0);
@@ -2073,6 +2075,7 @@ void runAdminSqlConsole(const UserAccount& user) {
             std::cout << "Press Enter to return: ";
             std::getline(std::cin, choice);
         } else if (choice == "B" || choice == "b") {
+            clearScreen();
             return;
         } else if (choice == "X" || choice == "x") {
             exit(0);
@@ -2104,6 +2107,7 @@ void runAdminConsole(const UserAccount& user) {
         } else if (choice == "2") {
             runAdminSqlConsole(user);
         } else if (choice == "B" || choice == "b") {
+            clearScreen();
             return;
         } else if (choice == "X" || choice == "x") {
             exit(0);
