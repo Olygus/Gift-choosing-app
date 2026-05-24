@@ -6,6 +6,9 @@
 #include <cctype>
 #include <memory>
 #include <sqlite3.h>
+#include <cmath>
+#include <iomanip>
+#include <sstream>
 
 // Platform-specific includes
 #ifdef _WIN32
@@ -46,6 +49,34 @@ char getch_cross() {
         tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
         return ch;
     #endif
+}
+
+// ANSI color helpers (24-bit)
+std::string esc_fg(int r, int g, int b) {
+    std::ostringstream ss;
+    ss << "\033[38;2;" << r << ";" << g << ";" << b << "m";
+    return ss.str();
+}
+
+std::string esc_bg(int r, int g, int b) {
+    std::ostringstream ss;
+    ss << "\033[48;2;" << r << ";" << g << ";" << b << "m";
+    return ss.str();
+}
+
+std::string esc_bold() {
+    return "\033[1m";
+}
+
+std::string esc_reset() {
+    return "\033[0m";
+}
+
+// Set terminal background color for the whole session (attempt)
+void setTerminalBackground(int r, int g, int b) {
+    std::string bg = esc_bg(r, g, b);
+    // Set background color and clear screen
+    std::cout << bg << "\033[2J\033[H" << std::flush;
 }
 
 std::string readMaskedInput(const std::string& prompt) {
@@ -121,6 +152,7 @@ struct RankedItem {
     std::string associate_link;
     double price;
     double distance_squared; 
+    double match_percentage; 
     
     bool operator>(const RankedItem& other) const {
         return distance_squared > other.distance_squared;
@@ -476,9 +508,21 @@ void renderNavigationBar(const std::string& page_name,
                          const std::string& user_label,
                          const std::string& actions) {
     printDivider();
-    std::cout << "Giftify | " << page_name << std::endl;
-    std::cout << "User: " << user_label << std::endl;
-    std::cout << actions << std::endl;
+    const std::string reset = esc_reset();
+    // Palette colors (gruvbox_dark)
+    const std::string fg0 = esc_fg(251,241,199);
+    const std::string orange_bg = esc_bg(214,93,14);
+    const std::string yellow_fg = esc_fg(215,153,33);
+    const std::string aqua_fg = esc_fg(104,157,106);
+    const std::string blue_fg = esc_fg(69,133,136);
+
+    // Header: Giftify label with orange background, page name in yellow
+    std::cout << orange_bg << fg0 << " Giftify " << reset << " "
+              << yellow_fg << "| " << page_name << reset << std::endl;
+
+    // User and actions
+    std::cout << aqua_fg << "User: " << esc_bold() << user_label << reset << std::endl;
+    std::cout << blue_fg << actions << reset << std::endl;
     printDivider();
 }
 
@@ -1326,12 +1370,19 @@ void displayResults(const std::vector<RankedItem> &results, const std::string &p
     
     size_t display_count = std::min(size_t(3), results.size());
     for (size_t i = 0; i < display_count; i++) {
-        std::cout << "[" << (i+1) << "] " << results[i].item_name << std::endl;
-        std::cout << "    ID: " << results[i].item_id << std::endl;
-        std::cout << "    Retailer: " << results[i].retailer << std::endl;
-        std::cout << "    Price: $" << results[i].price << std::endl;
-        std::cout << "    Link: " << results[i].associate_link << std::endl;
-        std::cout << "    Match Score: " << results[i].distance_squared << std::endl;
+        const std::string reset = esc_reset();
+        const std::string purple = esc_fg(177,98,134);
+        const std::string blue = esc_fg(69,133,136);
+        const std::string green = esc_fg(152,151,26);
+        const std::string aqua = esc_fg(104,157,106);
+        const std::string yellow = esc_fg(215,153,33);
+
+        std::cout << "[" << (i+1) << "] " << esc_bold() << purple << results[i].item_name << reset << std::endl;
+        std::cout << "    " << blue << "ID: " << reset << results[i].item_id << std::endl;
+        std::cout << "    " << blue << "Retailer: " << reset << results[i].retailer << std::endl;
+        std::cout << "    " << green << "Price: $" << reset << std::fixed << std::setprecision(2) << results[i].price << std::endl;
+        std::cout << "    " << aqua << "Link: " << reset << results[i].associate_link << std::endl;
+        std::cout << "    " << yellow << "Match Score: " << esc_bold() << std::fixed << std::setprecision(2) << results[i].match_percentage << "%" << reset << std::endl;
         std::cout << std::endl;
     }
     
@@ -1388,6 +1439,7 @@ UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
         if (user.is_admin) {
             actions = "[A] Admin Console   " + actions;
         }
+        actions += "   [L] Logout";
         renderNavigationBar("Profile Selection", buildUserLabel(user), actions);
         std::cout << std::endl;
         
@@ -1401,6 +1453,7 @@ UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
             std::cout << "[A] Admin Console / SQL Tools" << std::endl;
         }
         std::cout << "[N] Create Profile" << std::endl;
+        std::cout << "[L] Logout" << std::endl;
         std::cout << "[X] Exit" << std::endl;
         std::cout << std::endl;
         printDivider();
@@ -1412,6 +1465,11 @@ UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
         if (choice == "X" || choice == "x") {
             std::cout << "Thank you for using Giftify. Goodbye!" << std::endl;
             exit(0);
+        } else if (choice == "L" || choice == "l") {
+            UserProfile empty;
+            empty.profile_id = -1;
+            clearScreen();
+            return empty;
         } else if ((choice == "A" || choice == "a") && user.is_admin) {
             runAdminConsole(user);
         } else if (choice == "N" || choice == "n") {
@@ -1420,6 +1478,7 @@ UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
             std::getline(std::cin, profile_name);
             
             if (createNewProfile(user_id, profile_name)) {
+                clearScreen();
                 std::cout << "Profile created successfully!" << std::endl;
                 continue;
             } else {
@@ -1431,6 +1490,7 @@ UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
                 int selection = std::stoi(choice) - 1;
                 if (selection >= 0 && selection < (int)profiles.size()) {
                     UserProfile selected = loadUserPreferences(profiles[selection].profile_id, user_id);
+                    clearScreen();
                     return selected;
                 } else {
                     std::cout << "Invalid selection. Please try again." << std::endl;
@@ -1558,22 +1618,70 @@ std::vector<RankedItem> buildRecommendations(const UserProfile& user_profile) {
     std::vector<Item> database = loadItemsFromDatabase();
     std::priority_queue<RankedItem, std::vector<RankedItem>, std::greater<RankedItem>> top_items;
 
-    // Create unit weights to avoid double-weighting (user_vector is already weighted)
-    double unit_weights[NUM_CATEGORIES];
+    // Use a weighted Euclidean distance on normalized scores.
+    // - Normalize user_vector to [0,1] by dividing by max possible (255*2 = 510).
+    // - Normalize item scores to [0,1] by dividing by 255.
+    // - Compute per-dimension weights from the user_vector; normalize them to sum=1 when possible.
+    // - Distance D = sqrt( sum_i w_i * (u_i_norm - v_i_norm)^2 ).
+    // - Normalize by D_max = sqrt( sum_i w_i * max_diff_i^2 ), where max_diff_i = max(u_i_norm, 1-u_i_norm).
+    // - match_pct = (1 - D / D_max) * 100.
+
+    const double max_user_score = 255.0 * 2.0; // 510
+
+    // Precompute normalized user vector and raw weights
+    double normalized_user[NUM_CATEGORIES];
+    double raw_weights[NUM_CATEGORIES];
+    double sum_raw_weights = 0.0;
     for (int i = 0; i < NUM_CATEGORIES; i++) {
-        unit_weights[i] = 1.0;
+        normalized_user[i] = user_vector[i] / max_user_score;
+        raw_weights[i] = user_vector[i];
+        sum_raw_weights += raw_weights[i];
     }
 
     for (const Item& item : database) {
-        double distance_sq = calculateSquaredDistance(user_vector, item.scores, unit_weights);
+        double normalized_item[NUM_CATEGORIES];
+        for (int i = 0; i < NUM_CATEGORIES; i++) normalized_item[i] = item.scores[i] / 255.0;
+
+        // Normalize weights to sum=1 unless all weights are zero
+        double weights_norm[NUM_CATEGORIES];
+        if (sum_raw_weights > 0.0) {
+            for (int i = 0; i < NUM_CATEGORIES; i++) weights_norm[i] = raw_weights[i] / sum_raw_weights;
+        } else {
+            for (int i = 0; i < NUM_CATEGORIES; i++) weights_norm[i] = 1.0 / (double)NUM_CATEGORIES;
+        }
+
+        double d_sq = 0.0;
+        double d_max_sq = 0.0;
+        for (int i = 0; i < NUM_CATEGORIES; i++) {
+            double diff = normalized_user[i] - normalized_item[i];
+            d_sq += weights_norm[i] * (diff * diff);
+
+            double max_diff = std::max(normalized_user[i], 1.0 - normalized_user[i]);
+            d_max_sq += weights_norm[i] * (max_diff * max_diff);
+        }
+
+        double D = std::sqrt(d_sq);
+        double D_max = std::sqrt(d_max_sq);
+
+        double match_pct = 0.0;
+        double distance_metric = 1.0;
+        if (D_max <= 0.0) {
+            match_pct = (D <= 0.0) ? 100.0 : 0.0;
+            distance_metric = (D <= 0.0) ? 0.0 : 1.0;
+        } else {
+            match_pct = (1.0 - (D / D_max)) * 100.0;
+            if (match_pct < 0.0) match_pct = 0.0;
+            if (match_pct > 100.0) match_pct = 100.0;
+            distance_metric = D / D_max;
+        }
 
         if (top_items.size() < TOP_N_ITEMS) {
             top_items.push({item.item_id, item.item_name, item.retailer,
-                           item.associate_link, item.price, distance_sq});
-        } else if (distance_sq < top_items.top().distance_squared) {
+                           item.associate_link, item.price, distance_metric, match_pct});
+        } else if (distance_metric < top_items.top().distance_squared) {
             top_items.pop();
             top_items.push({item.item_id, item.item_name, item.retailer,
-                           item.associate_link, item.price, distance_sq});
+                           item.associate_link, item.price, distance_metric, match_pct});
         }
     }
 
@@ -1583,9 +1691,20 @@ std::vector<RankedItem> buildRecommendations(const UserProfile& user_profile) {
         top_items.pop();
     }
 
-    //fixed a bug where results were always tech related for non teck people
-    // `top_items` already pops the best matches first, so reversing here would
-    // accidentally turn the recommendation list into worst-to-best order.
+    // Ensure results are ordered best-to-worst by match percentage
+    std::sort(results.begin(), results.end(), [](const RankedItem &a, const RankedItem &b) {
+        return a.match_percentage > b.match_percentage;
+    });
+    // this was added due to a annoying items flooding the top list due to sheer volume
+    // Filter out items with no meaningful match (0%). If filtering removes everything,
+    // fall back to the original results so the UI can still show something.
+    std::vector<RankedItem> filtered;
+    const double MATCH_THRESHOLD = 0.0001; // treat extremely small values as zero
+    for (const auto &r : results) {
+        if (r.match_percentage > MATCH_THRESHOLD) filtered.push_back(r);
+    }
+
+    if (!filtered.empty()) return filtered;
     return results;
 }
 
