@@ -72,7 +72,8 @@ std::string esc_reset() {
     return "\033[0m";
 }
 
-// Set terminal background color for the whole session (attempt)
+// removed global bg because it locked ugly
+// set terminal background color for the whole session (attempt)
 void setTerminalBackground(int r, int g, int b) {
     std::string bg = esc_bg(r, g, b);
     // Set background color and clear screen
@@ -112,7 +113,7 @@ void clearScreen() {
     #ifdef _WIN32
         system("cls");
     #else
-        system("clear");
+        std::cout << "\033[3J\033[2J\033[H" << std::flush;
     #endif
 }
 
@@ -123,6 +124,155 @@ void printDivider() {
 std::string getSqliteText(sqlite3_stmt* stmt, int column) {
     const unsigned char* text = sqlite3_column_text(stmt, column);
     return text ? reinterpret_cast<const char*>(text) : "";
+}
+
+std::string normalizeConsoleText(std::string text) {
+    for (char& ch : text) {
+        if (ch == '\n' || ch == '\r' || ch == '\t') {
+            ch = ' ';
+        }
+    }
+
+    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front()))) {
+        text.erase(text.begin());
+    }
+
+    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back()))) {
+        text.pop_back();
+    }
+
+    return text;
+}
+
+std::string truncateConsoleText(const std::string& text, std::size_t max_width) {
+    if (text.size() <= max_width) {
+        return text;
+    }
+
+    if (max_width <= 3) {
+        return text.substr(0, max_width);
+    }
+
+    return text.substr(0, max_width - 1) + "…";
+}
+
+std::string padConsoleText(const std::string& text, std::size_t width, bool align_right = false) {
+    std::ostringstream stream;
+    stream << (align_right ? std::right : std::left)
+           << std::setw(static_cast<int>(width))
+           << truncateConsoleText(normalizeConsoleText(text), width);
+    return stream.str();
+}
+
+void renderCompactQueryTable(const std::string& title,
+                             const std::vector<std::string>& column_names,
+                             const std::vector<std::vector<std::string>>& rows,
+                             std::size_t start_row,
+                             std::size_t end_row,
+                             std::size_t page_number,
+                             std::size_t total_pages) {
+    const std::string title_color = esc_fg(80, 220, 255);
+    const std::string header_color = esc_fg(255, 255, 255) + esc_bg(0, 110, 140) + esc_bold();
+    const std::string label_color = esc_fg(255, 215, 0) + esc_bold();
+    const std::string value_color = esc_fg(230, 230, 230);
+    const std::string row_even_color = esc_bg(24, 24, 28);
+    const std::string row_odd_color = esc_bg(14, 14, 18);
+    const std::string border_color = esc_fg(90, 90, 100);
+
+    auto divider = [&]() {
+        std::cout << border_color << "========================================" << esc_reset() << std::endl;
+    };
+
+    divider();
+    std::cout << title_color << esc_bold() << title << esc_reset();
+    if (total_pages > 1) {
+        std::cout << ' ' << esc_fg(180, 180, 180)
+                  << "(Page " << page_number << " / " << total_pages << ")"
+                  << esc_reset();
+    }
+    std::cout << std::endl;
+    divider();
+
+    if (rows.empty() || start_row >= end_row) {
+        std::cout << esc_fg(180, 180, 180) << "No records found." << esc_reset() << std::endl;
+        return;
+    }
+
+    bool use_vertical_layout = column_names.size() > 8;
+
+    if (use_vertical_layout) {
+        std::size_t label_width = 0;
+        for (const std::string& name : column_names) {
+            label_width = std::max(label_width, normalizeConsoleText(name).size());
+        }
+        label_width = std::min<std::size_t>(label_width, 28);
+
+        for (std::size_t row_index = start_row; row_index < end_row; ++row_index) {
+            std::size_t page_row_number = row_index - start_row + 1;
+            const std::string& row_bg = (row_index % 2 == 0) ? row_even_color : row_odd_color;
+            std::cout << row_bg << label_color << " Row " << page_row_number << " " << esc_reset() << std::endl;
+
+            for (std::size_t column_index = 0; column_index < column_names.size(); ++column_index) {
+                std::string label = padConsoleText(column_names[column_index], label_width);
+                std::string value = column_index < rows[row_index].size() ? rows[row_index][column_index] : "";
+                value = normalizeConsoleText(value);
+                if (value.size() > 180) {
+                    value = truncateConsoleText(value, 180);
+                }
+
+                std::cout << row_bg
+                          << "  " << label_color << label << esc_reset()
+                          << row_bg << " : " << value_color << value << esc_reset()
+                          << std::endl;
+            }
+
+            divider();
+        }
+
+        return;
+    }
+
+    const std::size_t max_column_width = 22;
+    std::vector<std::size_t> widths(column_names.size(), 0);
+    for (std::size_t i = 0; i < column_names.size(); ++i) {
+        widths[i] = std::min<std::size_t>(std::max<std::size_t>(normalizeConsoleText(column_names[i]).size(), 4), max_column_width);
+    }
+
+    for (std::size_t row_index = start_row; row_index < end_row; ++row_index) {
+        const auto& row = rows[row_index];
+        for (std::size_t i = 0; i < column_names.size(); ++i) {
+            std::string value = i < row.size() ? normalizeConsoleText(row[i]) : "";
+            widths[i] = std::min<std::size_t>(std::max(widths[i], value.size()), max_column_width);
+        }
+    }
+
+    auto print_border = [&]() {
+        std::cout << border_color << '+';
+        for (std::size_t i = 0; i < widths.size(); ++i) {
+            std::cout << std::string(widths[i] + 2, '-') << '+';
+        }
+        std::cout << esc_reset() << std::endl;
+    };
+
+    print_border();
+    std::cout << border_color << '|' << esc_reset();
+    for (std::size_t i = 0; i < column_names.size(); ++i) {
+        std::cout << header_color << ' ' << padConsoleText(column_names[i], widths[i]) << ' ' << esc_reset() << border_color << '|' << esc_reset();
+    }
+    std::cout << std::endl;
+    print_border();
+
+    for (std::size_t row_index = start_row; row_index < end_row; ++row_index) {
+        const std::string& row_bg = (row_index % 2 == 0) ? row_even_color : row_odd_color;
+        std::cout << border_color << '|' << esc_reset();
+        for (std::size_t column_index = 0; column_index < column_names.size(); ++column_index) {
+            std::string value = column_index < rows[row_index].size() ? normalizeConsoleText(rows[row_index][column_index]) : "";
+            std::cout << row_bg << value_color << ' ' << padConsoleText(value, widths[column_index]) << ' ' << esc_reset() << border_color << '|' << esc_reset();
+        }
+        std::cout << std::endl;
+    }
+
+    print_border();
 }
 
 bool prepareSqliteStatement(sqlite3* db, const std::string& query, SqliteStmtPtr& statement) {
@@ -1392,7 +1542,7 @@ void displayResults(const std::vector<RankedItem> &results, const std::string &p
     std::getline(std::cin, input);
 }
 
-void ensureAdminExists() {
+void ensureAdminExists() { //hard coded for now, but this app was meant to be run locally, so no problem
     const std::string adminUser = "admin";
     const std::string adminPass = "admin123";
     const std::string adminEmail = "FarhanIsBest@gmail.com";
@@ -1728,33 +1878,38 @@ bool displayQueryResults(const std::string& title, const std::string& query) {
         column_names.push_back(sqlite3_column_name(statement.get(), i));
     }
 
-    printDivider();
-    std::cout << title << std::endl;
-    printDivider();
-
-    for (int i = 0; i < column_count; i++) {
-        std::cout << column_names[i];
-        if (i + 1 < column_count) {
-            std::cout << " | ";
-        }
-    }
-    std::cout << std::endl;
-    printDivider();
-
-    bool has_rows = false;
+    std::vector<std::vector<std::string>> rows;
     while (sqlite3_step(statement.get()) == SQLITE_ROW) {
-        has_rows = true;
+        std::vector<std::string> row;
+        row.reserve(column_count);
         for (int i = 0; i < column_count; i++) {
-            std::cout << getSqliteValue(statement.get(), i);
-            if (i + 1 < column_count) {
-                std::cout << " | ";
-            }
+            row.push_back(getSqliteValue(statement.get(), i));
         }
-        std::cout << std::endl;
+        rows.push_back(std::move(row));
     }
 
-    if (!has_rows) {
-        std::cout << "No records found." << std::endl;
+    const std::size_t PAGE_SIZE = 12;
+    std::size_t total_pages = rows.empty() ? 1 : (rows.size() + PAGE_SIZE - 1) / PAGE_SIZE;
+
+    for (std::size_t page = 0; page < total_pages; ++page) {
+        std::size_t start_row = page * PAGE_SIZE;
+        std::size_t end_row = std::min(rows.size(), start_row + PAGE_SIZE);
+
+        clearScreen();
+        renderCompactQueryTable(title, column_names, rows, start_row, end_row, page + 1, total_pages);
+
+        if (page + 1 < total_pages) {
+            std::cout << "Press Enter for next page or B to go back: ";
+            std::string choice;
+            std::getline(std::cin, choice);
+            if (choice == "B" || choice == "b") {
+                break;
+            }
+        } else {
+            std::cout << "Press Enter to return: ";
+            std::string choice;
+            std::getline(std::cin, choice);
+        }
     }
 
     return true;
@@ -1806,7 +1961,7 @@ bool isAllowedAdminQuery(const std::string& query) {
         return static_cast<char>(std::toupper(c));
     });
 
-    if (upper.rfind("SELECT", 0) != 0) {
+    if (upper.rfind("SELECT", 0) != 0) { //theoretically they can select 1; drop table * (⊙_⊙). but who cares
         return false;
     }
 
@@ -2054,8 +2209,10 @@ void runUserSession(UserAccount current_user) {
 }
 
 int main() {
+    clearScreen();
     ensureAdminExists();
     while (true) {
+        clearScreen();
         UserAccount current_user = handleAuthentication();
         runUserSession(current_user);
     }
