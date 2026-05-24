@@ -1058,6 +1058,8 @@ UserAccount promptForSignIn() {
             std::cout << "\nLogin successful! Welcome, " << username << "!" << std::endl;
         } else {
             ++attempts;
+            clearScreen();
+            renderNavigationBar("Sign In", "Guest", "[1] Sign In   [2] Create Account   [X] Exit");
             if (attempts < MAX_ATTEMPTS) {
                 std::cout << "Invalid username or password. Attempts remaining: " 
                          << (MAX_ATTEMPTS - attempts) << std::endl << std::endl;
@@ -1159,6 +1161,7 @@ UserAccount handleAuthentication() {
             std::cout << "Thank you for using Giftify. Goodbye!" << std::endl;
             exit(0);
         } else {
+            clearScreen();
             std::cout << "Invalid option. Please try again." << std::endl << std::endl;
         }
     }
@@ -1582,6 +1585,7 @@ void ensureAdminExists() { //hard coded for now, but this app was meant to be ru
 
 UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
     while (true) {
+        clearScreen();
         printDivider();
         std::cout << "Loading preferences for: " << user.username << std::endl;
         printDivider();
@@ -1643,9 +1647,11 @@ UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
                     clearScreen();
                     return selected;
                 } else {
+                    clearScreen();
                     std::cout << "Invalid selection. Please try again." << std::endl;
                 }
             } catch (...) {
+                clearScreen();
                 std::cout << "Invalid option. Please try again." << std::endl;
             }
         }
