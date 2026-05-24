@@ -406,7 +406,7 @@ def build_profile_rows() -> list[tuple]:
     rows = []
     for profile_id, name, user_id, focus_key in PROFILE_SPECS:
         scores = {col: 0 for col in SCORE_COLS}
-        sliders = {col: 0.0 for col in SLIDER_COLS}
+        sliders = {col: 1 for col in SLIDER_COLS}
         score_fields, slider_field, slider_value = PROFILE_FOCUS[focus_key]
         for field in score_fields:
             scores[field] = 180

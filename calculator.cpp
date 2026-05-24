@@ -1047,88 +1047,88 @@ void runQuiz(UserProfile &profile, const std::string& user_label) {
     printDivider();
     renderNavigationBar("Preference Quiz", user_label, "[Enter] Confirm each answer");
     std::cout << "\nThis 41-question quiz will help us understand what kind of gifts are perfect for this person.\n" << std::endl;
-    std::cout << "Please give each question a rating from 1 to 5 (5 = they really like that, 1 = they would never be caught doing that).\n" << std::endl;
+    std::cout << "Please give each question a rating from 0 to 5 (5 = they really like that, 0 = they would never be caught doing that).\n" << std::endl;
     
     std::vector<std::pair<std::string, int*>> questions = {
         // Electronics (0-8)
-        {"Interest in computing devices (laptops, desktops, tablets)? (1-5): ", &profile.computing_devices_score},
-        {"Interest in computer peripherals (mouse, keyboard, etc.)? (1-5): ", &profile.peripherals_score},
-        {"Interest in displays and monitors? (1-5): ", &profile.displays_score},
-        {"Interest in storage devices (SSDs, hard drives)? (1-5): ", &profile.storage_electronics_score},
-        {"Interest in audio equipment (speakers, headphones)? (1-5): ", &profile.audio_score},
-        {"Interest in video equipment (cameras, projectors)? (1-5): ", &profile.video_score},
-        {"Interest in wearable tech (smartwatches, fitness trackers)? (1-5): ", &profile.wearables_tech_score},
-        {"Interest in tech accessories (cables, chargers, cases)? (1-5): ", &profile.accessories_electronics_score},
-        {"Interest in power and charging solutions? (1-5): ", &profile.power_charging_score},
+        {"Interest in computing devices (laptops, desktops, tablets)? (0-5): ", &profile.computing_devices_score},
+        {"Interest in computer peripherals (mouse, keyboard, etc.)? (0-5): ", &profile.peripherals_score},
+        {"Interest in displays and monitors? (0-5): ", &profile.displays_score},
+        {"Interest in storage devices (SSDs, hard drives)? (0-5): ", &profile.storage_electronics_score},
+        {"Interest in audio equipment (speakers, headphones)? (0-5): ", &profile.audio_score},
+        {"Interest in video equipment (cameras, projectors)? (0-5): ", &profile.video_score},
+        {"Interest in wearable tech (smartwatches, fitness trackers)? (0-5): ", &profile.wearables_tech_score},
+        {"Interest in tech accessories (cables, chargers, cases)? (0-5): ", &profile.accessories_electronics_score},
+        {"Interest in power and charging solutions? (0-5): ", &profile.power_charging_score},
         
         // Home (9-13)
-        {"Interest in furniture? (1-5): ", &profile.furniture_score},
-        {"Interest in home decor and wall art? (1-5): ", &profile.home_decor_score},
-        {"Interest in home storage solutions? (1-5): ", &profile.storage_home_score},
-        {"Interest in cleaning supplies and tools? (1-5): ", &profile.cleaning_score},
-        {"Interest in home organization items? (1-5): ", &profile.home_organization_score},
+        {"Interest in furniture? (0-5): ", &profile.furniture_score},
+        {"Interest in home decor and wall art? (0-5): ", &profile.home_decor_score},
+        {"Interest in home storage solutions? (0-5): ", &profile.storage_home_score},
+        {"Interest in cleaning supplies and tools? (0-5): ", &profile.cleaning_score},
+        {"Interest in home organization items? (0-5): ", &profile.home_organization_score},
         
         // Personal Care (14-15)
-        {"Interest in skincare products? (1-5): ", &profile.skincare_score},
-        {"Interest in personal hygiene items? (1-5): ", &profile.personal_hygiene_score},
+        {"Interest in skincare products? (0-5): ", &profile.skincare_score},
+        {"Interest in personal hygiene items? (0-5): ", &profile.personal_hygiene_score},
         
         // Fashion (16-19)
-        {"Interest in men's fashion and clothing? (1-5): ", &profile.men_fashion_score},
-        {"Interest in women's fashion and clothing? (1-5): ", &profile.women_fashion_score},
-        {"Interest in children's fashion? (1-5): ", &profile.children_fashion_score},
-        {"Interest in general fashion accessories? (1-5): ", &profile.fashion_general_score},
+        {"Interest in men's fashion and clothing? (0-5): ", &profile.men_fashion_score},
+        {"Interest in women's fashion and clothing? (0-5): ", &profile.women_fashion_score},
+        {"Interest in children's fashion? (0-5): ", &profile.children_fashion_score},
+        {"Interest in general fashion accessories? (0-5): ", &profile.fashion_general_score},
         
         // Luxury (20-21)
-        {"Interest in jewelry and watches? (1-5): ", &profile.jewelry_score},
-        {"Interest in luxury and high-end items? (1-5): ", &profile.luxury_score},
+        {"Interest in jewelry and watches? (0-5): ", &profile.jewelry_score},
+        {"Interest in luxury and high-end items? (0-5): ", &profile.luxury_score},
         
         // Children & Family (22-25)
-        {"Interest in toys and play items? (1-5): ", &profile.toys_score},
-        {"Interest in educational toys? (1-5): ", &profile.educational_toys_score},
-        {"Interest in games and puzzles? (1-5): ", &profile.games_puzzles_score},
-        {"Interest in baby gear and equipment? (1-5): ", &profile.baby_gear_score},
+        {"Interest in toys and play items? (0-5): ", &profile.toys_score},
+        {"Interest in educational toys? (0-5): ", &profile.educational_toys_score},
+        {"Interest in games and puzzles? (0-5): ", &profile.games_puzzles_score},
+        {"Interest in baby gear and equipment? (0-5): ", &profile.baby_gear_score},
         
         // Pets (26-27)
-        {"Interest in pet toys? (1-5): ", &profile.pet_toys_score},
-        {"Interest in pet health and care products? (1-5): ", &profile.pet_health_score},
+        {"Interest in pet toys? (0-5): ", &profile.pet_toys_score},
+        {"Interest in pet health and care products? (0-5): ", &profile.pet_health_score},
         
         // Cars & Tools (28-33)
-        {"Interest in car accessories? (1-5): ", &profile.car_accessories_score},
-        {"Interest in vehicles and car equipment? (1-5): ", &profile.car_vehicle_score},
-        {"Interest in power tools? (1-5): ", &profile.power_tools_score},
-        {"Interest in hand tools? (1-5): ", &profile.hand_tools_score},
-        {"Interest in industrial equipment? (1-5): ", &profile.industrial_score},
-        {"Interest in safety equipment? (1-5): ", &profile.safety_score},
+        {"Interest in car accessories? (0-5): ", &profile.car_accessories_score},
+        {"Interest in vehicles and car equipment? (0-5): ", &profile.car_vehicle_score},
+        {"Interest in power tools? (0-5): ", &profile.power_tools_score},
+        {"Interest in hand tools? (0-5): ", &profile.hand_tools_score},
+        {"Interest in industrial equipment? (0-5): ", &profile.industrial_score},
+        {"Interest in safety equipment? (0-5): ", &profile.safety_score},
         
         // Outdoors & Creative (34-40)
-        {"Interest in gardening supplies? (1-5): ", &profile.gardening_supplies_score},
-        {"Interest in outdoor equipment? (1-5): ", &profile.outdoor_score},
-        {"Interest in camping gear? (1-5): ", &profile.camping_score},
-        {"Interest in fitness equipment? (1-5): ", &profile.fitness_score},
-        {"Interest in books? (1-5): ", &profile.books_score},
-        {"Interest in musical instruments? (1-5): ", &profile.music_instruments_score},
-        {"Interest in movies and media? (1-5): ", &profile.movies_media_score}
+        {"Interest in gardening supplies? (0-5): ", &profile.gardening_supplies_score},
+        {"Interest in outdoor equipment? (0-5): ", &profile.outdoor_score},
+        {"Interest in camping gear? (0-5): ", &profile.camping_score},
+        {"Interest in fitness equipment? (0-5): ", &profile.fitness_score},
+        {"Interest in books? (0-5): ", &profile.books_score},
+        {"Interest in musical instruments? (0-5): ", &profile.music_instruments_score},
+        {"Interest in movies and media? (0-5): ", &profile.movies_media_score}
     };
     
     for (size_t i = 0; i < questions.size(); i++) {
         std::cout << "[" << (i+1) << "/41] " << questions[i].first;
         
-        int response = 0;
-        while (response < 1 || response > 5) {
+        int response = -1;
+        while (response < 0 || response > 5) {
             std::string input;
             std::getline(std::cin, input);
             try {
                 response = std::stoi(input);
-                if (response < 1 || response > 5) {
-                    std::cout << "Please enter a number between 1 and 5: ";
+                if (response < 0 || response > 5) {
+                    std::cout << "Please enter a number between 0 and 5: ";
                 }
             } catch (...) {
-                std::cout << "Invalid input. Please enter a number between 1 and 5: ";
+                std::cout << "Invalid input. Please enter a number between 0 and 5: ";
             }
         }
         
-        // Map response (1-5) to category score (0-255 scale)
-        // 1->51, 2->102, 3->153, 4->204, 5->255
+        // Map response (0-5) to category score (0-255 scale)
+        // 0->0, 1->51, 2->102, 3->153, 4->204, 5->255
         *questions[i].second = response * 51;
     }
     
@@ -1480,9 +1480,11 @@ std::vector<Item> loadItemsFromDatabase() {
         item.associate_link = getSqliteText(statement.get(), 3);
         item.price = sqlite3_column_double(statement.get(), 4);
         
-        // Load all 41 category scores
+        // Bug fix: the recommender used to normalize only the user side, which made
+        // item scores and quiz answers live on different scales and skewed results.
+        // Keep item scores on the same 0-255 scale as the stored quiz answers.
         for (int i = 0; i < NUM_CATEGORIES; i++) {
-            item.scores[i] = sqlite3_column_double(statement.get(), 5 + i) / 255.0;
+            item.scores[i] = sqlite3_column_double(statement.get(), 5 + i);
         }
         
         items.push_back(item);
@@ -1499,55 +1501,55 @@ std::vector<RankedItem> buildRecommendations(const UserProfile& user_profile) {
     double weights[NUM_CATEGORIES];
     double user_vector[NUM_CATEGORIES];
 
-    weights[0] = (user_profile.computing_devices_score / 255.0) * user_profile.electronics_slider;
-    weights[1] = (user_profile.peripherals_score / 255.0) * user_profile.electronics_slider;
-    weights[2] = (user_profile.displays_score / 255.0) * user_profile.electronics_slider;
-    weights[3] = (user_profile.storage_electronics_score / 255.0) * user_profile.electronics_slider;
-    weights[4] = (user_profile.audio_score / 255.0) * user_profile.electronics_slider;
-    weights[5] = (user_profile.video_score / 255.0) * user_profile.electronics_slider;
-    weights[6] = (user_profile.wearables_tech_score / 255.0) * user_profile.electronics_slider;
-    weights[7] = (user_profile.accessories_electronics_score / 255.0) * user_profile.electronics_slider;
-    weights[8] = (user_profile.power_charging_score / 255.0) * user_profile.electronics_slider;
+    weights[0] = user_profile.computing_devices_score * user_profile.electronics_slider;
+    weights[1] = user_profile.peripherals_score * user_profile.electronics_slider;
+    weights[2] = user_profile.displays_score * user_profile.electronics_slider;
+    weights[3] = user_profile.storage_electronics_score * user_profile.electronics_slider;
+    weights[4] = user_profile.audio_score * user_profile.electronics_slider;
+    weights[5] = user_profile.video_score * user_profile.electronics_slider;
+    weights[6] = user_profile.wearables_tech_score * user_profile.electronics_slider;
+    weights[7] = user_profile.accessories_electronics_score * user_profile.electronics_slider;
+    weights[8] = user_profile.power_charging_score * user_profile.electronics_slider;
 
-    weights[9] = (user_profile.furniture_score / 255.0) * user_profile.home_slider;
-    weights[10] = (user_profile.home_decor_score / 255.0) * user_profile.home_slider;
-    weights[11] = (user_profile.storage_home_score / 255.0) * user_profile.home_slider;
-    weights[12] = (user_profile.cleaning_score / 255.0) * user_profile.home_slider;
-    weights[13] = (user_profile.home_organization_score / 255.0) * user_profile.home_slider;
+    weights[9] = user_profile.furniture_score * user_profile.home_slider;
+    weights[10] = user_profile.home_decor_score * user_profile.home_slider;
+    weights[11] = user_profile.storage_home_score * user_profile.home_slider;
+    weights[12] = user_profile.cleaning_score * user_profile.home_slider;
+    weights[13] = user_profile.home_organization_score * user_profile.home_slider;
 
-    weights[14] = (user_profile.skincare_score / 255.0) * user_profile.personal_care_slider;
-    weights[15] = (user_profile.personal_hygiene_score / 255.0) * user_profile.personal_care_slider;
+    weights[14] = user_profile.skincare_score * user_profile.personal_care_slider;
+    weights[15] = user_profile.personal_hygiene_score * user_profile.personal_care_slider;
 
-    weights[16] = (user_profile.men_fashion_score / 255.0) * user_profile.wearables_slider;
-    weights[17] = (user_profile.women_fashion_score / 255.0) * user_profile.wearables_slider;
-    weights[18] = (user_profile.children_fashion_score / 255.0) * user_profile.wearables_slider;
-    weights[19] = (user_profile.fashion_general_score / 255.0) * user_profile.wearables_slider;
+    weights[16] = user_profile.men_fashion_score * user_profile.wearables_slider;
+    weights[17] = user_profile.women_fashion_score * user_profile.wearables_slider;
+    weights[18] = user_profile.children_fashion_score * user_profile.wearables_slider;
+    weights[19] = user_profile.fashion_general_score * user_profile.wearables_slider;
 
-    weights[20] = (user_profile.jewelry_score / 255.0) * user_profile.luxury_slider;
-    weights[21] = (user_profile.luxury_score / 255.0) * user_profile.luxury_slider;
+    weights[20] = user_profile.jewelry_score * user_profile.luxury_slider;
+    weights[21] = user_profile.luxury_score * user_profile.luxury_slider;
 
-    weights[22] = (user_profile.toys_score / 255.0) * user_profile.children_slider;
-    weights[23] = (user_profile.educational_toys_score / 255.0) * user_profile.children_slider;
-    weights[24] = (user_profile.games_puzzles_score / 255.0) * user_profile.children_slider;
-    weights[25] = (user_profile.baby_gear_score / 255.0) * user_profile.children_slider;
+    weights[22] = user_profile.toys_score * user_profile.children_slider;
+    weights[23] = user_profile.educational_toys_score * user_profile.children_slider;
+    weights[24] = user_profile.games_puzzles_score * user_profile.children_slider;
+    weights[25] = user_profile.baby_gear_score * user_profile.children_slider;
 
-    weights[26] = (user_profile.pet_toys_score / 255.0) * user_profile.pet_slider;
-    weights[27] = (user_profile.pet_health_score / 255.0) * user_profile.pet_slider;
+    weights[26] = user_profile.pet_toys_score * user_profile.pet_slider;
+    weights[27] = user_profile.pet_health_score * user_profile.pet_slider;
 
-    weights[28] = (user_profile.car_accessories_score / 255.0) * user_profile.car_slider;
-    weights[29] = (user_profile.car_vehicle_score / 255.0) * user_profile.car_slider;
-    weights[30] = (user_profile.power_tools_score / 255.0) * user_profile.car_slider;
-    weights[31] = (user_profile.hand_tools_score / 255.0) * user_profile.car_slider;
-    weights[32] = (user_profile.industrial_score / 255.0) * user_profile.car_slider;
-    weights[33] = (user_profile.safety_score / 255.0) * user_profile.car_slider;
+    weights[28] = user_profile.car_accessories_score * user_profile.car_slider;
+    weights[29] = user_profile.car_vehicle_score * user_profile.car_slider;
+    weights[30] = user_profile.power_tools_score * user_profile.car_slider;
+    weights[31] = user_profile.hand_tools_score * user_profile.car_slider;
+    weights[32] = user_profile.industrial_score * user_profile.car_slider;
+    weights[33] = user_profile.safety_score * user_profile.car_slider;
 
-    weights[34] = (user_profile.gardening_supplies_score / 255.0) * user_profile.outdoor_slider;
-    weights[35] = (user_profile.outdoor_score / 255.0) * user_profile.outdoor_slider;
-    weights[36] = (user_profile.camping_score / 255.0) * user_profile.outdoor_slider;
-    weights[37] = (user_profile.fitness_score / 255.0) * user_profile.outdoor_slider;
-    weights[38] = (user_profile.books_score / 255.0) * user_profile.creative_slider;
-    weights[39] = (user_profile.music_instruments_score / 255.0) * user_profile.creative_slider;
-    weights[40] = (user_profile.movies_media_score / 255.0) * user_profile.creative_slider;
+    weights[34] = user_profile.gardening_supplies_score * user_profile.outdoor_slider;
+    weights[35] = user_profile.outdoor_score * user_profile.outdoor_slider;
+    weights[36] = user_profile.camping_score * user_profile.outdoor_slider;
+    weights[37] = user_profile.fitness_score * user_profile.outdoor_slider;
+    weights[38] = user_profile.books_score * user_profile.creative_slider;
+    weights[39] = user_profile.music_instruments_score * user_profile.creative_slider;
+    weights[40] = user_profile.movies_media_score * user_profile.creative_slider;
 
     for (int i = 0; i < NUM_CATEGORIES; i++) {
         user_vector[i] = weights[i];
@@ -1556,8 +1558,14 @@ std::vector<RankedItem> buildRecommendations(const UserProfile& user_profile) {
     std::vector<Item> database = loadItemsFromDatabase();
     std::priority_queue<RankedItem, std::vector<RankedItem>, std::greater<RankedItem>> top_items;
 
+    // Create unit weights to avoid double-weighting (user_vector is already weighted)
+    double unit_weights[NUM_CATEGORIES];
+    for (int i = 0; i < NUM_CATEGORIES; i++) {
+        unit_weights[i] = 1.0;
+    }
+
     for (const Item& item : database) {
-        double distance_sq = calculateSquaredDistance(user_vector, item.scores, weights);
+        double distance_sq = calculateSquaredDistance(user_vector, item.scores, unit_weights);
 
         if (top_items.size() < TOP_N_ITEMS) {
             top_items.push({item.item_id, item.item_name, item.retailer,
@@ -1575,7 +1583,9 @@ std::vector<RankedItem> buildRecommendations(const UserProfile& user_profile) {
         top_items.pop();
     }
 
-    std::reverse(results.begin(), results.end());
+    //fixed a bug where results were always tech related for non teck people
+    // `top_items` already pops the best matches first, so reversing here would
+    // accidentally turn the recommendation list into worst-to-best order.
     return results;
 }
 
