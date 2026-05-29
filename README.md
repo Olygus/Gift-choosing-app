@@ -27,11 +27,11 @@ Ensure you have a C++17 compliant compiler and the SQLite3 development libraries
    ```
 3. Compile the project:
    ```bash
-   g++ -std=c++17 -O2 -Wall -Wextra -o giftify calculator.cpp -lsqlite3
+   g++ -std=c++17 -O2 -Wall -Wextra -o giftyfy calculator.cpp -lsqlite3
    ```
 4. Run the application:
    ```bash
-   ./giftify
+   ./giftyfy
    ```
 ### Arch Linux Setup & Compilation
 
@@ -47,11 +47,11 @@ Ensure you have a C++17 compliant compiler and the SQLite3 development libraries
    ```
 3. Compile the project:
    ```bash
-   g++ -std=c++17 -O2 -Wall -Wextra -o giftify calculator.cpp -lsqlite3
+   g++ -std=c++17 -O2 -Wall -Wextra -o giftyfy calculator.cpp -lsqlite3
    ```
 4. Run the application:
    ```bash
-   ./giftify
+   ./giftyfy
    ```
 
 ### Windows (MinGW/MSYS2)
@@ -59,11 +59,11 @@ Ensure you have a C++17 compliant compiler and the SQLite3 development libraries
 2. Install or download the SQLite3 amalgamation files (`sqlite3.h` and DLL/lib).
 3. Compile the project:
    ```cmd
-   g++ -std=c++17 -O2 -Wall -Wextra -o giftify.exe calculator.cpp -lsqlite3
+   g++ -std=c++17 -O2 -Wall -Wextra -o giftyfy.exe calculator.cpp -lsqlite3
    ```
 4. Run the application:
    ```cmd
-   giftify.exe
+   giftyfy.exe
    ```
 
 ## Optional: Load Sample Data
