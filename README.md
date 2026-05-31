@@ -71,7 +71,7 @@ Ensure you have a C++17 compliant compiler and the SQLite3 development libraries
 If you want a populated with a sanple database to test with, run the sample seeding script before launching the app. This works on Debian/Ubuntu, Arch Linux, and Windows as long as Python 3 is installed:
 
 ```bash (Linux based)
-python3 db-generate-sample.py giftify.db
+python3 db-generate-sample.py giftyfy.db
 ```
 
 On Windows, use:
