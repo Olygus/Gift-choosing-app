@@ -1,4 +1,4 @@
-# Giftify Calculator
+# Giftyfy Calculator
 
 A gift choosing assistant originally created as part of assigment task 3 for enterprise computing made with a C++17 calculator and featuring SQLite3 integration.
 
@@ -77,7 +77,7 @@ python3 db-generate-sample.py giftify.db
 On Windows, use:
 
 ```cmd
-python db-generate-sample.py giftify.db
+python db-generate-sample.py giftyfy.db
 ```
 
 This resets the sample tables and inserts users, profiles, items, and sales data that match the SQLite schema used by the app.
