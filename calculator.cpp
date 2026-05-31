@@ -24,7 +24,7 @@ const int NUM_CATEGORIES = 41;
 const int TOP_N_ITEMS = 10;
 
 
-const std::string DB_PATH = "giftify.db";
+const std::string DB_PATH = "giftyfy.db";
 
 using SqliteDbPtr = std::unique_ptr<sqlite3, decltype(&sqlite3_close)>;
 using SqliteStmtPtr = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;
@@ -666,8 +666,8 @@ void renderNavigationBar(const std::string& page_name,
     const std::string aqua_fg = esc_fg(104,157,106);
     const std::string blue_fg = esc_fg(69,133,136);
 
-    // Header: Giftify label with orange background, page name in yellow
-    std::cout << orange_bg << fg0 << " Giftify " << reset << " "
+    // Header: Giftyfy label with orange background, page name in yellow
+    std::cout << orange_bg << fg0 << " Giftyfy " << reset << " "
               << yellow_fg << "| " << page_name << reset << std::endl;
 
     // User and actions
@@ -1036,7 +1036,7 @@ UserAccount promptForSignIn() {
     std::string username, password;
     
     printDivider();
-    std::cout << "         GIFTIFY - SIGN IN" << std::endl;
+    std::cout << "         GIFTYFY - SIGN IN" << std::endl;
     printDivider();
     renderNavigationBar("Sign In", "Guest", "[1] Sign In   [2] Create Account   [X] Exit");
     std::cout << std::endl;
@@ -1078,7 +1078,7 @@ UserAccount promptForSignUp() {
     std::string username, password, email, confirm_password;
     
     printDivider();
-    std::cout << "      GIFTIFY - CREATE ACCOUNT" << std::endl;
+    std::cout << "      GIFTYFY - CREATE ACCOUNT" << std::endl;
     printDivider();
     renderNavigationBar("Create Account", "Guest", "[1] Sign In   [2] Create Account   [X] Exit");
     std::cout << std::endl;
@@ -1137,7 +1137,7 @@ UserAccount handleAuthentication() {
     
     while (user.user_id == -1) { //add forgot passwrod or email function
          printDivider();
-        std::cout << "         GIFTIFY - WELCOME" << std::endl;
+        std::cout << "         GIFTYFY - WELCOME" << std::endl;
         printDivider();
     renderNavigationBar("Welcome", "Guest", "[1] Sign In   [2] Create Account   [X] Exit");
         std::cout << std::endl;
@@ -1158,7 +1158,7 @@ UserAccount handleAuthentication() {
             clearScreen();
             user = promptForSignUp();
         } else if (choice == "X" || choice == "x") {
-            std::cout << "Thank you for using Giftify. Goodbye!" << std::endl;
+            std::cout << "Thank you for using Giftyfy. Goodbye!" << std::endl;
             exit(0);
         } else {
             clearScreen();
@@ -1240,7 +1240,7 @@ bool createNewProfile(int user_id, const std::string& profile_name) {
 
 void runQuiz(UserProfile &profile, const std::string& user_label) {
     printDivider();
-    std::cout << "         GIFTIFY - PREFERENCE QUIZ" << std::endl;
+    std::cout << "         GIFTYFY - PREFERENCE QUIZ" << std::endl;
     printDivider();
     renderNavigationBar("Preference Quiz", user_label, "[Enter] Confirm each answer");
     std::cout << "\nThis 41-question quiz will help us understand what kind of gifts are perfect for this person.\n" << std::endl;
@@ -1461,7 +1461,7 @@ bool saveProfileScores(int profile_id, int user_id, const UserProfile &profile) 
 
 void adjustSliders(UserProfile &profile, const std::string& user_label) {
     printDivider();
-    std::cout << "      ADJUST YOUR GIFTIFY PREFERENCES" << std::endl;
+    std::cout << "      ADJUST YOUR GIFTYFY PREFERENCES" << std::endl;
     printDivider();
     renderNavigationBar("Adjust Preferences", user_label, "[A] Decrease   [S] Increase   [Enter] Confirm");
     std::cout << "\nUse A to decrease, S to increase, Enter to confirm for each category group.\n" << std::endl;
@@ -1617,7 +1617,7 @@ UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
         std::getline(std::cin, choice);
         
         if (choice == "X" || choice == "x") {
-            std::cout << "Thank you for using Giftify. Goodbye!" << std::endl;
+            std::cout << "Thank you for using Giftyfy. Goodbye!" << std::endl;
             exit(0);
         } else if (choice == "L" || choice == "l") {
             UserProfile empty;
