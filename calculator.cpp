@@ -309,6 +309,12 @@ struct RankedItem {
     }
 };
 
+struct RankedItemWorseDistanceFirst {
+    bool operator()(const RankedItem& a, const RankedItem& b) const {
+        return a.distance_squared < b.distance_squared;
+    }
+};
+
 double calculateSquaredDistance(const double user_scores[NUM_CATEGORIES], 
                                 const double item_scores[NUM_CATEGORIES], 
                                 const double category_weights[NUM_CATEGORIES]) {
@@ -350,10 +356,10 @@ void renderSlider(const std::string& category, double &value) {
     bool adjusting = true;
 
     while (adjusting) {
-        // Clear line and display instructions
+        // clear line and display instructions
         std::cout << "\r" << category << " [" ;
         
-        // Draw the visual bar
+        // draw the visual bar
         int pos = static_cast<int>((value / 2.0) * BAR_WIDTH);
         for (int i = 0; i < BAR_WIDTH; ++i) {
             if (i < pos) std::cout << "=";
@@ -363,17 +369,17 @@ void renderSlider(const std::string& category, double &value) {
         std::cout << "] " << (int)(value * 50) << "% (A: - | S: + | Enter: Confirm)";
         std::cout.flush();
 
-        // Handle Input
+        // handle input
         char key = getch_cross(); 
         if (key == 'a' || key == 'A') {
-            if (value > 0.0) value -= 0.1; // Decrease by 0.1
+            if (value > 0.0) value -= 0.1; // decrease by 0.1
         } else if (key == 's' || key == 'S') {
-            if (value < 2.0) value += 0.1; // Increase by 0.1
+            if (value < 2.0) value += 0.1; // increase by 0.1
         } else if (key == 10 || key == 13) { // 10 is Enter on Unix, 13 is carriage return
             adjusting = false;
-            std::cout << std::endl; // Move to next line after confirm
+            std::cout << std::endl; // move to next line after confirm
         }
-        // Boundary check
+        // boundary check
         if (value < 0) value = 0;
         if (value > 2.0) value = 2.0;
     }
@@ -448,7 +454,7 @@ bool tableExists(sqlite3* db, const std::string& table) {
 }
 
 bool ensureDatabaseCompatibility(sqlite3* db) {
-    // If core tables do not exist (fresh DB), initialize schema from code.
+    // if core tables do not exist (fresh DB), initialize schema from code.
     if (!tableExists(db, "users_login")) {
         const char* init_sql = R"sql(
 PRAGMA foreign_keys = ON;
@@ -1772,7 +1778,9 @@ std::vector<RankedItem> buildRecommendations(const UserProfile& user_profile) {
     }
 
     std::vector<Item> database = loadItemsFromDatabase();
-    std::priority_queue<RankedItem, std::vector<RankedItem>, std::greater<RankedItem>> top_items;
+    // Keep a max-heap by distance so top() is the current worst kept result.
+    // Then, a better candidate (smaller distance) can replace it.
+    std::priority_queue<RankedItem, std::vector<RankedItem>, RankedItemWorseDistanceFirst> top_items;
 
     // Use a weighted Euclidean distance on normalized scores.
     // - Normalize user_vector to [0,1] by dividing by max possible (255*2 = 510).
