@@ -24,7 +24,7 @@ const int NUM_CATEGORIES = 41;
 const int TOP_N_ITEMS = 10;
 
 
-const std::string DB_PATH = "giftyfy.db";
+const std::string DB_PATH = "giftyfy.db"; //edit this if you want a different database
 
 using SqliteDbPtr = std::unique_ptr<sqlite3, decltype(&sqlite3_close)>;
 using SqliteStmtPtr = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;
@@ -1553,7 +1553,7 @@ void displayResults(const std::vector<RankedItem> &results, const std::string &p
 
 void ensureAdminExists() { //hard coded for now, but this app was meant to be run locally, so no problem
     const std::string adminUser = "admin";
-    const std::string adminPass = "admin123";
+    const std::string adminPass = "admin123"; //please change this if there are many users
     const std::string adminEmail = "FarhanIsBest@gmail.com";
 
     if (!usernameExists(adminUser)) {
