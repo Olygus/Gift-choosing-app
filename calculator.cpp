@@ -24,7 +24,7 @@ const int NUM_CATEGORIES = 41;
 const int TOP_N_ITEMS = 10;
 
 
-const std::string DB_PATH = "giftyfy.db"; //edit this if you want a different database
+const std::string DB_PATH = "giftify.db";
 
 using SqliteDbPtr = std::unique_ptr<sqlite3, decltype(&sqlite3_close)>;
 using SqliteStmtPtr = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;
@@ -72,7 +72,7 @@ std::string esc_reset() {
     return "\033[0m";
 }
 
-// removed global bg because it locked ugly
+// removed global bg because it looked ugly
 // set terminal background color for the whole session (attempt)
 void setTerminalBackground(int r, int g, int b) {
     std::string bg = esc_bg(r, g, b);
@@ -309,12 +309,6 @@ struct RankedItem {
     }
 };
 
-struct RankedItemWorseDistanceFirst {
-    bool operator()(const RankedItem& a, const RankedItem& b) const {
-        return a.distance_squared < b.distance_squared;
-    }
-};
-
 double calculateSquaredDistance(const double user_scores[NUM_CATEGORIES], 
                                 const double item_scores[NUM_CATEGORIES], 
                                 const double category_weights[NUM_CATEGORIES]) {
@@ -356,10 +350,10 @@ void renderSlider(const std::string& category, double &value) {
     bool adjusting = true;
 
     while (adjusting) {
-        // clear line and display instructions
+        // Clear line and display instructions
         std::cout << "\r" << category << " [" ;
         
-        // draw the visual bar
+        // Draw the visual bar
         int pos = static_cast<int>((value / 2.0) * BAR_WIDTH);
         for (int i = 0; i < BAR_WIDTH; ++i) {
             if (i < pos) std::cout << "=";
@@ -369,17 +363,17 @@ void renderSlider(const std::string& category, double &value) {
         std::cout << "] " << (int)(value * 50) << "% (A: - | S: + | Enter: Confirm)";
         std::cout.flush();
 
-        // handle input
+        // Handle Input
         char key = getch_cross(); 
         if (key == 'a' || key == 'A') {
-            if (value > 0.0) value -= 0.1; // decrease by 0.1
+            if (value > 0.0) value -= 0.1; // Decrease by 0.1
         } else if (key == 's' || key == 'S') {
-            if (value < 2.0) value += 0.1; // increase by 0.1
+            if (value < 2.0) value += 0.1; // Increase by 0.1
         } else if (key == 10 || key == 13) { // 10 is Enter on Unix, 13 is carriage return
             adjusting = false;
-            std::cout << std::endl; // move to next line after confirm
+            std::cout << std::endl; // Move to next line after confirm
         }
-        // boundary check
+        // Boundary check
         if (value < 0) value = 0;
         if (value > 2.0) value = 2.0;
     }
@@ -454,7 +448,7 @@ bool tableExists(sqlite3* db, const std::string& table) {
 }
 
 bool ensureDatabaseCompatibility(sqlite3* db) {
-    // if core tables do not exist (fresh DB), initialize schema from code.
+    // If core tables do not exist (fresh DB), initialize schema from code.
     if (!tableExists(db, "users_login")) {
         const char* init_sql = R"sql(
 PRAGMA foreign_keys = ON;
@@ -672,8 +666,8 @@ void renderNavigationBar(const std::string& page_name,
     const std::string aqua_fg = esc_fg(104,157,106);
     const std::string blue_fg = esc_fg(69,133,136);
 
-    // Header: Giftyfy label with orange background, page name in yellow
-    std::cout << orange_bg << fg0 << " Giftyfy " << reset << " "
+    // Header: Giftify label with orange background, page name in yellow
+    std::cout << orange_bg << fg0 << " Giftify " << reset << " "
               << yellow_fg << "| " << page_name << reset << std::endl;
 
     // User and actions
@@ -1042,7 +1036,7 @@ UserAccount promptForSignIn() {
     std::string username, password;
     
     printDivider();
-    std::cout << "         GIFTYFY - SIGN IN" << std::endl;
+    std::cout << "         GIFTIFY - SIGN IN" << std::endl;
     printDivider();
     renderNavigationBar("Sign In", "Guest", "[1] Sign In   [2] Create Account   [X] Exit");
     std::cout << std::endl;
@@ -1084,7 +1078,7 @@ UserAccount promptForSignUp() {
     std::string username, password, email, confirm_password;
     
     printDivider();
-    std::cout << "      GIFTYFY - CREATE ACCOUNT" << std::endl;
+    std::cout << "      GIFTIFY - CREATE ACCOUNT" << std::endl;
     printDivider();
     renderNavigationBar("Create Account", "Guest", "[1] Sign In   [2] Create Account   [X] Exit");
     std::cout << std::endl;
@@ -1143,7 +1137,7 @@ UserAccount handleAuthentication() {
     
     while (user.user_id == -1) { //add forgot passwrod or email function
          printDivider();
-        std::cout << "         GIFTYFY - WELCOME" << std::endl;
+        std::cout << "         GIFTIFY - WELCOME" << std::endl;
         printDivider();
     renderNavigationBar("Welcome", "Guest", "[1] Sign In   [2] Create Account   [X] Exit");
         std::cout << std::endl;
@@ -1164,7 +1158,7 @@ UserAccount handleAuthentication() {
             clearScreen();
             user = promptForSignUp();
         } else if (choice == "X" || choice == "x") {
-            std::cout << "Thank you for using Giftyfy. Goodbye!" << std::endl;
+            std::cout << "Thank you for using Giftify. Goodbye!" << std::endl;
             exit(0);
         } else {
             clearScreen();
@@ -1246,7 +1240,7 @@ bool createNewProfile(int user_id, const std::string& profile_name) {
 
 void runQuiz(UserProfile &profile, const std::string& user_label) {
     printDivider();
-    std::cout << "         GIFTYFY - PREFERENCE QUIZ" << std::endl;
+    std::cout << "         GIFTIFY - PREFERENCE QUIZ" << std::endl;
     printDivider();
     renderNavigationBar("Preference Quiz", user_label, "[Enter] Confirm each answer");
     std::cout << "\nThis 41-question quiz will help us understand what kind of gifts are perfect for this person.\n" << std::endl;
@@ -1467,7 +1461,7 @@ bool saveProfileScores(int profile_id, int user_id, const UserProfile &profile) 
 
 void adjustSliders(UserProfile &profile, const std::string& user_label) {
     printDivider();
-    std::cout << "      ADJUST YOUR GIFTYFY PREFERENCES" << std::endl;
+    std::cout << "      ADJUST YOUR GIFTIFY PREFERENCES" << std::endl;
     printDivider();
     renderNavigationBar("Adjust Preferences", user_label, "[A] Decrease   [S] Increase   [Enter] Confirm");
     std::cout << "\nUse A to decrease, S to increase, Enter to confirm for each category group.\n" << std::endl;
@@ -1553,7 +1547,7 @@ void displayResults(const std::vector<RankedItem> &results, const std::string &p
 
 void ensureAdminExists() { //hard coded for now, but this app was meant to be run locally, so no problem
     const std::string adminUser = "admin";
-    const std::string adminPass = "admin123"; //please change this if there are many users
+    const std::string adminPass = "admin123";
     const std::string adminEmail = "FarhanIsBest@gmail.com";
 
     if (!usernameExists(adminUser)) {
@@ -1623,7 +1617,7 @@ UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
         std::getline(std::cin, choice);
         
         if (choice == "X" || choice == "x") {
-            std::cout << "Thank you for using Giftyfy. Goodbye!" << std::endl;
+            std::cout << "Thank you for using Giftify. Goodbye!" << std::endl;
             exit(0);
         } else if (choice == "L" || choice == "l") {
             UserProfile empty;
@@ -1778,9 +1772,7 @@ std::vector<RankedItem> buildRecommendations(const UserProfile& user_profile) {
     }
 
     std::vector<Item> database = loadItemsFromDatabase();
-    // Keep a max-heap by distance so top() is the current worst kept result.
-    // Then, a better candidate (smaller distance) can replace it.
-    std::priority_queue<RankedItem, std::vector<RankedItem>, RankedItemWorseDistanceFirst> top_items;
+    std::priority_queue<RankedItem, std::vector<RankedItem>, std::greater<RankedItem>> top_items;
 
     // Use a weighted Euclidean distance on normalized scores.
     // - Normalize user_vector to [0,1] by dividing by max possible (255*2 = 510).
