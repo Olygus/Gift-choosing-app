@@ -4,6 +4,23 @@ gifty
 *.exe
 *.db
 
+# Python virtual environments
+.venv/
+venv/
+
+# Python cache/artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Streamlit local config/state
+.streamlit/
+
+# Local env files
+.env
+.env.*
+
 # you found this easter egg, now you get to marvel at its beauty!!      
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                                 
