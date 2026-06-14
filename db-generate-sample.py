@@ -472,8 +472,8 @@ def build_sale_rows(item_rows: list[tuple]) -> list[tuple]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Populate Giftify sample data")
-    parser.add_argument("db_path", nargs="?", default="giftify.db", help="SQLite database path")
+    parser = argparse.ArgumentParser(description="Populate Giftyfy sample data")
+    parser.add_argument("db_path", nargs="?", default="giftyfy.db", help="SQLite database path")
     args = parser.parse_args()
 
     conn = sqlite3.connect(args.db_path)

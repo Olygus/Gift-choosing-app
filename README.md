@@ -127,9 +127,9 @@ python -m streamlit run app.py
 Notes
 - If you created the virtual environment in a different location, replace the `.venv` path above with your environment's Python executable (quote the path if it contains spaces).
 - If you are using WSL, run the Linux commands from the WSL shell.
-- To run with the sample data (creates `giftify.db`), run the seeding script before launching the app:
+- To run with the sample data (creates `giftyfy.db`), run the seeding script before launching the app:
 
 ```bash
-python3 db-generate-sample.py giftify.db   # Linux/macOS
-python db-generate-sample.py giftify.db    # Windows
+python3 db-generate-sample.py giftyfy.db   # Linux/macOS
+python db-generate-sample.py giftyfy.db    # Windows
 ```
