@@ -12,7 +12,7 @@ import streamlit as st
 
 APP_TITLE = "Gyftyfy"
 APP_SUBTITLE = "Gift choosing assistant"
-DEFAULT_DB_PATH = Path(__file__).with_name("giftify.db")
+DEFAULT_DB_PATH = Path(__file__).with_name("giftyfy.db")
 
 TABLE_NAMES = ("users_login", "user_profiles", "items", "sales")
 
@@ -775,7 +775,7 @@ def render_sidebar() -> str:
     st.sidebar.markdown('<div style="height: 0.5rem"></div>', unsafe_allow_html=True)
     page = st.session_state.get("nav_page", NAV_PAGES[0])
     st.sidebar.markdown('<div style="height: 0.75rem"></div>', unsafe_allow_html=True)
-    db_override = st.sidebar.text_input("Database path", value=str(get_db_path()), help="Defaults to giftify.db beside app.py")
+    db_override = st.sidebar.text_input("Database path", value=str(get_db_path()), help="Defaults to giftyfy.db beside app.py")
     st.session_state["db_path"] = db_override
     return page
 
