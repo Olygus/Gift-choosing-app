@@ -81,3 +81,55 @@ python db-generate-sample.py giftyfy.db
 ```
 
 This resets the sample tables and inserts users, profiles, items, and sales data that match the SQLite schema used by the app.
+
+## Run the Streamlit app for dashboard (local)
+
+Prerequisites
+- Python 3.8+ installed
+- `streamlit` (install into your virtual environment or system Python):
+
+```bash
+pip install streamlit pandas plotly
+```
+
+Linux
+
+```bash
+# from the folder where you cloned the repository:
+cd Gift-choosing-app
+# (optional) activate the project's venv if you created one:
+source .venv/bin/activate
+# then run Streamlit
+python -m streamlit run app.py
+
+# OR run the venv python directly (useful when your path contains spaces):
+"./.venv/bin/python" -m streamlit run app.py
+```
+
+Windows (PowerShell)
+
+```powershell
+# from the folder where you cloned the repository:
+cd "C:\path\to\Gift-choosing-app"
+# activate venv created with `python -m venv .venv`:
+.\.venv\Scripts\Activate.ps1
+python -m streamlit run app.py
+```
+
+Windows (Command Prompt)
+
+```cmd
+cd "C:\path\to\Gift-choosing-app"
+.venv\Scripts\activate.bat
+python -m streamlit run app.py
+```
+
+Notes
+- If you created the virtual environment in a different location, replace the `.venv` path above with your environment's Python executable (quote the path if it contains spaces).
+- If you are using WSL, run the Linux commands from the WSL shell.
+- To run with the sample data (creates `giftify.db`), run the seeding script before launching the app:
+
+```bash
+python3 db-generate-sample.py giftify.db   # Linux/macOS
+python db-generate-sample.py giftify.db    # Windows
+```
