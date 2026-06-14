@@ -511,6 +511,26 @@ def apply_global_style() -> None:
             color: var(--muted);
             font-size: 0.95rem;
         }
+        /* Make Streamlit input widgets visually overlap the search-card so they
+           appear inside the styled card element. This keeps labels and inputs
+           readable while preserving Streamlit's DOM structure. */
+        .search-card {
+            position: relative;
+            padding-bottom: 2.6rem;
+        }
+
+        .search-card.compact {
+            padding-bottom: 1.6rem;
+        }
+
+        /* Pull the immediate following Streamlit input blocks upward into the card */
+        .search-card + div .stNumberInput,
+        .search-card + div .stTextInput,
+        .search-card.compact + div .stTextInput {
+            margin-top: -2.4rem !important;
+            position: relative;
+            z-index: 3;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -953,30 +973,47 @@ def render_items_page(db_path: Path) -> None:
     left_col, right_col = st.columns([1.28, 1.0], gap="large")
 
     with left_col:
-        st.markdown('<div class="search-card">user input</div>', unsafe_allow_html=True)
-        st.markdown('<div style="height: 1rem"></div>', unsafe_allow_html=True)
+        # Big header card containing the ID input
+        st.markdown('<div class="search-card">', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:2rem; font-weight:800; text-align:center; padding:0.6rem 0;">user input</div>', unsafe_allow_html=True)
         item_id = st.number_input("query by ID", min_value=0, step=1, value=0, help="Enter an item_id to narrow the item search")
-        item_name = st.text_input("query by name", value="", placeholder="Search by item name")
-        st.markdown('<div style="height: 0.6rem"></div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<div style="height: 1rem"></div>', unsafe_allow_html=True)
 
-        # Autocomplete suggestions: fetch item names and show a selectbox of matches
+        # Compact card below for the name search and autocomplete chips
+        st.markdown('<div class="search-card compact">', unsafe_allow_html=True)
+        if "item_name_query" not in st.session_state:
+            st.session_state["item_name_query"] = ""
+
+        item_name_query = st.text_input("query by name", value=st.session_state.get("item_name_query", ""), key="item_name_query", placeholder="Type to filter suggestions (autocomplete)")
+
         try:
             names_df = get_item_names(str(db_path))
         except Exception:
             names_df = pd.DataFrame(columns=["item_id", "item_name"])
 
-        suggestions = []
-        if item_name and not names_df.empty:
-            lower = item_name.strip().lower()
+        suggestions: list[str] = []
+        if item_name_query and not names_df.empty:
+            lower = item_name_query.strip().lower()
             mask = names_df["item_name"].str.lower().str.contains(lower, na=False)
             suggestions = names_df.loc[mask, "item_name"].head(15).tolist()
         elif not names_df.empty:
             suggestions = names_df["item_name"].head(15).tolist()
 
+        # Render suggestion buttons in rows of 3; clicking a chip fills the text input.
         if suggestions:
-            selected_suggest = st.selectbox("Suggestions (pick to autofill)", ["-- keep typing --"] + suggestions, index=0)
-            if selected_suggest and selected_suggest != "-- keep typing --":
-                item_name = selected_suggest
+            chips_per_row = 3
+            cols = [st.columns(chips_per_row) for _ in range((len(suggestions) + chips_per_row - 1) // chips_per_row)]
+            for idx, s in enumerate(suggestions):
+                row = cols[idx // chips_per_row]
+                col = row[idx % chips_per_row]
+                if col.button(s, key=f"suggest_{idx}"):
+                    st.session_state["item_name_query"] = s
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Use the current query value (which may have been set by clicking a chip)
+        item_name = st.session_state.get("item_name_query", "")
 
         search_id = int(item_id) if item_id > 0 else None
         results = get_items_summary(str(db_path), item_id=search_id, item_name=item_name)
