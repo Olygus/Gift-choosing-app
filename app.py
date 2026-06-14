@@ -1,3 +1,4 @@
+#the python shit show continued is broght to you by app.py
 from __future__ import annotations
 
 import os
@@ -173,7 +174,7 @@ SCHEMA_DISPLAY_NAMES = {
 
 NAV_PAGES = ("Home", "Dashboard", "Items", "Tables")
 
-
+# when you think the css nighmare is over but this shit needs to be done, honestly iy is better that what i was cooking in c++
 def apply_global_style() -> None:
     st.markdown(
         """
@@ -463,7 +464,9 @@ def apply_global_style() -> None:
             position: relative;
             background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
         }
-
+        /* 
+        the gift is meant to be a logo for a phote, it is in canva rn and when it is doen cooking i will use it instead.
+        */
         .gift-box::before {
             content: "🎁";
             position: absolute;
@@ -534,6 +537,7 @@ def apply_global_style() -> None:
         </style>
         """,
         unsafe_allow_html=True,
+        # who needs seperate style sheets when you can have 3 giant files with 2000+ lines each, here i choose to take a giant dump of css
     )
 
 
@@ -720,7 +724,8 @@ def get_sales_price_bands(db_path_str: str) -> pd.DataFrame:
         FROM ranked
         GROUP BY price_band
         ORDER BY price_band
-    """
+    """ 
+    # the sql stikes back with the fancy window function to create price bands; this is used for the sales price distribution chart
     return fetch_dataframe(db_path_str, query)
 
 
@@ -765,11 +770,12 @@ def render_sidebar() -> str:
     if "nav_page" not in st.session_state:
         st.session_state["nav_page"] = NAV_PAGES[0]
 
-    # Create a button for each page. Pressing a button updates session state.
+    # Cceate a button for each page. Pressing a button updates session state.
     for p in NAV_PAGES:
         if st.sidebar.button(p, key=f"nav_{p}"):
             st.session_state["nav_page"] = p
-    # Remove the dotted list; keep a divider and gift box only
+    # remove the dotted list; keep a divider and gift box only
+    # I had a great idea to also use javascript here, i pushed that idea so deep in my arse that i forgot about it, this is the best case senario for my mental health
     st.sidebar.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
     st.sidebar.markdown('<div class="gift-box"></div>', unsafe_allow_html=True)
     st.sidebar.markdown('<div style="height: 0.5rem"></div>', unsafe_allow_html=True)
@@ -873,7 +879,7 @@ def render_dashboard_page(db_path: Path) -> None:
     st.markdown('<div class="section-title" style="text-align:center; margin-bottom: 1rem;">DASHBOARD</div>', unsafe_allow_html=True)
 
     left_col, middle_col, right_col = st.columns([1.1, 1.55, 1.08], gap="large")
-
+# I love life 
     with left_col:
         render_small_metric("number of users", f"{total_users} users")
         st.markdown('<div style="height: 0.8rem"></div>', unsafe_allow_html=True)
@@ -970,7 +976,7 @@ def render_dashboard_page(db_path: Path) -> None:
 def render_items_page(db_path: Path) -> None:
     st.markdown('<div class="section-title" style="text-align:center; margin-bottom: 1rem;">ITEMS</div>', unsafe_allow_html=True)
 
-    left_col, right_col = st.columns([1.28, 1.0], gap="large")
+    left_col, right_col = st.columns([1.28, 1.0], gap="large") # majic number for fun
 
     with left_col:
         # Big header card containing the ID input
@@ -1000,7 +1006,7 @@ def render_items_page(db_path: Path) -> None:
         elif not names_df.empty:
             suggestions = names_df["item_name"].head(15).tolist()
 
-        # Render suggestion buttons in rows of 3; clicking a chip fills the text input.
+        # render suggestion buttons in rows of 3; clicking a chip fills the text input.
         if suggestions:
             chips_per_row = 3
             cols = [st.columns(chips_per_row) for _ in range((len(suggestions) + chips_per_row - 1) // chips_per_row)]
@@ -1042,7 +1048,7 @@ def render_items_page(db_path: Path) -> None:
             st.markdown('</span></div>', unsafe_allow_html=True)
             render_info_pair("price", f"${float(selected['price']):,.2f}" if pd.notna(selected["price"]) else "")
             st.markdown('</div>', unsafe_allow_html=True)
-
+# I will not k*** myself, I will not k*** myslef, it is only a small amout of python, 1000 lines in and i will not k*** myself.
     with right_col:
         st.markdown('<div class="scroll-card">', unsafe_allow_html=True)
         if results.empty:
@@ -1149,6 +1155,7 @@ def main() -> None:
     except Exception as exc:  # noqa: BLE001
         st.error(f"Unexpected error while rendering {page.lower()} view: {exc}")
 
+# now you can take your keyboard out you ass, the pyhton shitshow is over
 
 if __name__ == "__main__":
     main()

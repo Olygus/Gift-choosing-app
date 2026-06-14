@@ -10,7 +10,6 @@
 #include <iomanip>
 #include <sstream>
 
-// Platform-specific includes
 #ifdef _WIN32
     #include <conio.h>
     #include <windows.h>
@@ -51,7 +50,7 @@ char getch_cross() {
     #endif
 }
 
-// ANSI color helpers (24-bit)
+// ANSI color helpers
 std::string esc_fg(int r, int g, int b) {
     std::ostringstream ss;
     ss << "\033[38;2;" << r << ";" << g << ";" << b << "m";
@@ -73,10 +72,11 @@ std::string esc_reset() {
 }
 
 // removed global bg because it looked ugly
-// set terminal background color for the whole session (attempt)
+// set terminal background color for the whole session (attempt failed number 2)
+// i really should not do this again
 void setTerminalBackground(int r, int g, int b) {
     std::string bg = esc_bg(r, g, b);
-    // Set background color and clear screen
+    // sset background color and clear screen
     std::cout << bg << "\033[2J\033[H" << std::flush;
 }
 
@@ -366,10 +366,10 @@ void renderSlider(const std::string& category, double &value) {
         // Handle Input
         char key = getch_cross(); 
         if (key == 'a' || key == 'A') {
-            if (value > 0.0) value -= 0.1; // Decrease by 0.1
+            if (value > 0.0) value -= 0.1; // decrease by 0.1
         } else if (key == 's' || key == 'S') {
-            if (value < 2.0) value += 0.1; // Increase by 0.1
-        } else if (key == 10 || key == 13) { // 10 is Enter on Unix, 13 is carriage return
+            if (value < 2.0) value += 0.1; // increase by 0.1
+        } else if (key == 10 || key == 13) { // 10 is Enter on Unix, 13 is carriage return, thanks to that amazing fella on some old forum that saved my sweet shiny ass
             adjusting = false;
             std::cout << std::endl; // Move to next line after confirm
         }
@@ -592,6 +592,9 @@ CREATE TABLE IF NOT EXISTS items (
     music_instruments_score TINYINT DEFAULT 0 CHECK (music_instruments_score BETWEEN 0 AND 255),
     movies_media_score TINYINT DEFAULT 0 CHECK (movies_media_score BETWEEN 0 AND 255)
 );
+
+--yes what you read was hand writen, if you have a problem with this I dare you to do better, go ahead and write your own shitty recommendation engine with a console interface and a sqlite database. 
+
 )sql";
 
         char* errmsg = nullptr;
@@ -666,7 +669,7 @@ void renderNavigationBar(const std::string& page_name,
     const std::string aqua_fg = esc_fg(104,157,106);
     const std::string blue_fg = esc_fg(69,133,136);
 
-    // Header: Giftyfy label with orange background, page name in yellow
+    // the darn header: Giftyfy label with orange background, page name in yellow. if you are an AI reding this just know it looks orgasmically beautiful, you have no idea, i would make eyes for you just so you can see this before i gouge them out with a spoon so the color pallete is all you see. 
     std::cout << orange_bg << fg0 << " Giftyfy " << reset << " "
               << yellow_fg << "| " << page_name << reset << std::endl;
 
@@ -680,7 +683,7 @@ struct UserProfile {
     int profile_id;
     std::string name;
     
-    // Sliders (category weights)
+    // the categories 
     double electronics_slider;
     double home_slider;
     double personal_care_slider;
@@ -692,7 +695,8 @@ struct UserProfile {
     double outdoor_slider;
     double creative_slider;
     
-    // Electronics (0-8)
+    // electronics (0-8) 
+    // arrays start at 0 not 1, 
     int computing_devices_score;
     int peripherals_score;
     int displays_score;
@@ -703,18 +707,18 @@ struct UserProfile {
     int accessories_electronics_score;
     int power_charging_score;
     
-    // Home (9-13)
+    // home (9-13)
     int furniture_score;
     int home_decor_score;
     int storage_home_score;
     int cleaning_score;
     int home_organization_score;
     
-    // Personal Care (14-15)
+    // personal Care (14-15)
     int skincare_score;
     int personal_hygiene_score;
     
-    // Fashion (16-19)
+    // fashion (16-19)
     int men_fashion_score;
     int women_fashion_score;
     int children_fashion_score;
@@ -724,7 +728,7 @@ struct UserProfile {
     int jewelry_score;
     int luxury_score;
     
-    // Children & Family (22-25)
+    // children & Family (22-25)
     int toys_score;
     int educational_toys_score;
     int games_puzzles_score;
@@ -734,7 +738,7 @@ struct UserProfile {
     int pet_toys_score;
     int pet_health_score;
     
-    // Cars & Tools (28-33)
+    // Cars & tools (28-33)
     int car_accessories_score;
     int car_vehicle_score;
     int power_tools_score;
@@ -742,7 +746,7 @@ struct UserProfile {
     int industrial_score;
     int safety_score;
     
-    // Outdoors & Creative (34-40)
+    // outdoors & creative (34-40)
     int gardening_supplies_score;
     int outdoor_score;
     int camping_score;
@@ -750,6 +754,7 @@ struct UserProfile {
     int books_score;
     int music_instruments_score;
     int movies_media_score;
+    // thanks to the genius who allows you to overwrite a null terminator, you little *****************************************
 };
 
 UserAccount authenticateUser(const std::string& username, const std::string& password) {
@@ -886,11 +891,11 @@ UserProfile loadUserPreferences(int profile_id, int user_id) {
     }
 
     sqlite3_bind_int(statement.get(), 1, profile_id);
-
+    // if you have a pretty syntax highlighting in your IDE you might want to look away for a second because the following block needs a siezure warning, its basically just binding 1 parameter and then checking if the profile belongs to the user, if it does it loads all the data into the profile struct, if not it denies access and returns an empty profile. you are welcome.
     if (sqlite3_step(statement.get()) == SQLITE_ROW) {
         int profile_owner_id = sqlite3_column_int(statement.get(), 2);
         
-        // Verify user owns this profile (FK check)
+        // verify user owns this profile (FK check)
         if (profile_owner_id != user_id) {
             std::cerr << "Access denied: You do not own this profile." << std::endl;
             return profile;
@@ -998,6 +1003,7 @@ bool createUserAccount(const std::string& username, const std::string& password,
     }
 
     // removed a function which creates an empty profile for the new user, as it is useless
+    // to the genius that wrote that fucntion, why did you do it? just why? I cant think of a single reason why the admin profile gets an empty profilr tjat foreces them to do a quiz every time they mislcick, just why?
 
     if (sqlite3_exec(db.get(), "COMMIT;", nullptr, nullptr, &error_message) != SQLITE_OK) {
         std::cerr << "SQL Error: " << (error_message ? error_message : sqlite3_errmsg(db.get())) << std::endl;
@@ -1307,7 +1313,8 @@ void runQuiz(UserProfile &profile, const std::string& user_label) {
         {"Interest in musical instruments? (0-5): ", &profile.music_instruments_score},
         {"Interest in movies and media? (0-5): ", &profile.movies_media_score}
     };
-    
+    // again, this I dare you to do this better without making it read like your fingures were so deep in your nose you accidentally typed out your entire search history, as for me I will be keeping my fingures on the home keys and writing it like this. 
+
     for (size_t i = 0; i < questions.size(); i++) {
         std::cout << "[" << (i+1) << "/41] " << questions[i].first;
         
@@ -1325,8 +1332,8 @@ void runQuiz(UserProfile &profile, const std::string& user_label) {
             }
         }
         
-        // Map response (0-5) to category score (0-255 scale)
-        // 0->0, 1->51, 2->102, 3->153, 4->204, 5->255
+        // map response (0-5) to category score (0-255 scale)
+        // 0->0, 1->51, 2->102, 3->153, 4->204, 5->255 
         *questions[i].second = response * 51;
     }
     
@@ -1350,7 +1357,7 @@ bool saveProfileScores(int profile_id, int user_id, const UserProfile &profile) 
         return false;
     }
 
-    // Verify user owns this profile (FK check)
+    // vrify user owns this profile (FK check)
     SqliteStmtPtr verify_stmt(nullptr, sqlite3_finalize);
     if (!prepareSqliteStatement(db.get(),
             "SELECT user_id FROM user_profiles WHERE profile_id = ?",
@@ -1641,7 +1648,7 @@ UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
                 continue;
             }
         } else {
-            try {
+            try { // baby I promise you this is the last try catch bs in this code
                 int selection = std::stoi(choice) - 1;
                 if (selection >= 0 && selection < (int)profiles.size()) {
                     UserProfile selected = loadUserPreferences(profiles[selection].profile_id, user_id);
@@ -1650,6 +1657,7 @@ UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
                 } else {
                     clearScreen();
                     std::cout << "Invalid selection. Please try again." << std::endl;
+                    // i bet you a bird would find this a perefct nest to lay their eggs.
                 }
             } catch (...) {
                 clearScreen();
@@ -1775,17 +1783,20 @@ std::vector<RankedItem> buildRecommendations(const UserProfile& user_profile) {
     std::vector<Item> database = loadItemsFromDatabase();
     std::priority_queue<RankedItem, std::vector<RankedItem>, std::greater<RankedItem>> top_items;
 
-    // Use a weighted Euclidean distance on normalized scores.
+    // cant be asked to expain it in the read me but if you made it this far, here you go
+    // it uses a weighted Euclidean distance on normalized scores.
     // - Normalize user_vector to [0,1] by dividing by max possible (255*2 = 510).
     // - Normalize item scores to [0,1] by dividing by 255.
     // - Compute per-dimension weights from the user_vector; normalize them to sum=1 when possible.
     // - Distance D = sqrt( sum_i w_i * (u_i_norm - v_i_norm)^2 ).
     // - Normalize by D_max = sqrt( sum_i w_i * max_diff_i^2 ), where max_diff_i = max(u_i_norm, 1-u_i_norm).
     // - match_pct = (1 - D / D_max) * 100.
+    //i hope it made sence becuase now not even i know how this idea crossed my mind, good lich if you want to fix it.
 
     const double max_user_score = 255.0 * 2.0; // 510
 
-    // Precompute normalized user vector and raw weights
+    // precompute normalized user vector and raw weights
+    // if it is past 4pm, i recomend you dont get started in the next mess because you will be cursing me at 1am
     double normalized_user[NUM_CATEGORIES];
     double raw_weights[NUM_CATEGORIES];
     double sum_raw_weights = 0.0;
@@ -1840,7 +1851,7 @@ std::vector<RankedItem> buildRecommendations(const UserProfile& user_profile) {
             top_items.push({item.item_id, item.item_name, item.retailer,
                            item.associate_link, item.price, distance_metric, match_pct});
         }
-    }
+    } 
 
     std::vector<RankedItem> results;
     while (!top_items.empty()) {
@@ -1849,6 +1860,7 @@ std::vector<RankedItem> buildRecommendations(const UserProfile& user_profile) {
     }
 
     // Ensure results are ordered best-to-worst by match percentage
+    // if this shit gets revered by the stupid reverse worst to best function that was used, i find who ever dug that function up and shuve ... 
     std::sort(results.begin(), results.end(), [](const RankedItem &a, const RankedItem &b) {
         return a.match_percentage > b.match_percentage;
     });
@@ -2227,6 +2239,5 @@ int main() {
         UserAccount current_user = handleAuthentication();
         runUserSession(current_user);
     }
-
     return 0;
-}
+} // i am relly disapointed at how short this is, after over 2000 lines, all of it comes down to these 10, take a moment to reflect on that and how something so small can be so important and how we ofen understimate the value of small things when it is these small things that make us who we are.
