@@ -1,9 +1,11 @@
+# let me preface this pyhton with a *spits* short talk about the stupid dicision that lead me here with "f**** this s***** and the r***** clown who decided that this is better that 300 lines of sql, i cant belive I was sitting down and let an llm talk me into doint this shit in python, i could of wrothe 300 instert comand but now i am here debuging s*** I dont even know how to write because thiss f**** language gives me a headache with the lack of indentation"
 from __future__ import annotations
 
 import argparse
 import sqlite3
 from datetime import datetime, timedelta
 
+# *spits again before starting*
 
 SCORE_COLS = [
     "computing_devices_score",
@@ -382,7 +384,7 @@ PROFILE_FOCUS = {
     "car": (["car_accessories_score", "car_vehicle_score"], "car_slider", 1.7),
     "personal": (["skincare_score", "personal_hygiene_score"], "personal_care_slider", 1.7),
 }
-
+# I know this is a lot of hardcoded data, but it is a sample data generator, and having the data defined in code allows for more complex logic to create more realistic profiles and sales patterns.
 
 def clear_existing_rows(conn: sqlite3.Connection) -> None:
     conn.execute("DELETE FROM sales")
@@ -470,6 +472,10 @@ def build_sale_rows(item_rows: list[tuple]) -> list[tuple]:
         rows.append((sale_id, user_cycle[(sale_id - 1) % 4], item_id, retailer, sale_price, commission_rate, profit, sold_at))
     return rows
 
+# this whole thing is stupid and don't even get me started on dynamic typing. It is a playground for 
+# lazy developers.'Oh look at me, my variable can be an integer, then a string, then a dictionary, then None!' 
+# That isn’t flexibility, it's architectural retardation. and I am a literal muppet, not even 600 lines in and 
+# this shit is slow enough that i can have an entire crash out as it is being "compiled" 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Populate Giftyfy sample data")
@@ -521,6 +527,10 @@ def main() -> None:
     finally:
         conn.close()
 
+#this is a message to the intepretor, "you are the reason global warming is a thing, you are the reason people in nafrica have no water 
+# or food, you are the reason that people have to wait 10 seconds for a script to run, you are the reason that I have a headache right now
+# and if i go k**** it is all your fault. you are painfully, embarrassingly slow, to the point that calling you a memory hog is a complament 
+# to you speed"
 
 if __name__ == "__main__":
     main()
