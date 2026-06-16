@@ -1,4 +1,4 @@
-#the python shit show continued is broght to you by app.py
+# the python shit show continued is broght to you by app.py
 from __future__ import annotations
 
 import os
@@ -11,7 +11,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-APP_TITLE = "Gyftyfy"
+APP_TITLE = "Giftyfy"
 APP_SUBTITLE = "Gift choosing assistant"
 DEFAULT_DB_PATH = Path(__file__).with_name("giftyfy.db")
 
@@ -114,55 +114,67 @@ GROUPED_SCORE_FIELDS = {
 }
 
 CATEGORY_GROUPS = [
-    ("Electronics", [
-        "computing_devices_score",
-        "peripherals_score",
-        "displays_score",
-        "storage_electronics_score",
-        "audio_score",
-        "video_score",
-        "wearables_tech_score",
-        "accessories_electronics_score",
-        "power_charging_score",
-    ]),
-    ("Home", [
-        "furniture_score",
-        "home_decor_score",
-        "storage_home_score",
-        "cleaning_score",
-        "home_organization_score",
-    ]),
-    ("Care", [
-        "skincare_score",
-        "personal_hygiene_score",
-        "men_fashion_score",
-        "women_fashion_score",
-        "children_fashion_score",
-        "fashion_general_score",
-    ]),
-    ("Family", [
-        "jewelry_score",
-        "luxury_score",
-        "toys_score",
-        "educational_toys_score",
-        "games_puzzles_score",
-        "baby_gear_score",
-        "pet_toys_score",
-        "pet_health_score",
-        "car_accessories_score",
-        "car_vehicle_score",
-        "power_tools_score",
-        "hand_tools_score",
-        "industrial_score",
-        "safety_score",
-        "gardening_supplies_score",
-        "outdoor_score",
-        "camping_score",
-        "fitness_score",
-        "books_score",
-        "music_instruments_score",
-        "movies_media_score",
-    ]),
+    (
+        "Electronics",
+        [
+            "computing_devices_score",
+            "peripherals_score",
+            "displays_score",
+            "storage_electronics_score",
+            "audio_score",
+            "video_score",
+            "wearables_tech_score",
+            "accessories_electronics_score",
+            "power_charging_score",
+        ],
+    ),
+    (
+        "Home",
+        [
+            "furniture_score",
+            "home_decor_score",
+            "storage_home_score",
+            "cleaning_score",
+            "home_organization_score",
+        ],
+    ),
+    (
+        "Care",
+        [
+            "skincare_score",
+            "personal_hygiene_score",
+            "men_fashion_score",
+            "women_fashion_score",
+            "children_fashion_score",
+            "fashion_general_score",
+        ],
+    ),
+    (
+        "Family",
+        [
+            "jewelry_score",
+            "luxury_score",
+            "toys_score",
+            "educational_toys_score",
+            "games_puzzles_score",
+            "baby_gear_score",
+            "pet_toys_score",
+            "pet_health_score",
+            "car_accessories_score",
+            "car_vehicle_score",
+            "power_tools_score",
+            "hand_tools_score",
+            "industrial_score",
+            "safety_score",
+            "gardening_supplies_score",
+            "outdoor_score",
+            "camping_score",
+            "fitness_score",
+            "books_score",
+            "music_instruments_score",
+            "movies_media_score",
+        ],
+    ),
 ]
 
 SCHEMA_DISPLAY_NAMES = {
@@ -173,6 +185,7 @@ SCHEMA_DISPLAY_NAMES = {
 }
 
 NAV_PAGES = ("Home", "Dashboard", "Items", "Tables")
+
 
 # when you think the css nighmare is over but this shit needs to be done, honestly iy is better that what i was cooking in c++
 def apply_global_style() -> None:
@@ -465,7 +478,7 @@ def apply_global_style() -> None:
             background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
         }
         /* 
-        the gift is meant to be a logo for a phote, it is in canva rn and when it is doen cooking i will use it instead.
+        TODO: the gift is meant to be a logo for a phote, it is in canva rn and when it is doen cooking i will use it instead.
         */
         .gift-box::before {
             content: "🎁";
@@ -560,14 +573,21 @@ def connect_db(db_path: Path) -> sqlite3.Connection:
 
 
 @st.cache_data(show_spinner=False)
-def fetch_dataframe(db_path_str: str, query: str, params: Sequence[object] | None = None) -> pd.DataFrame:
+def fetch_dataframe(
+    db_path_str: str, query: str, params: Sequence[object] | None = None
+) -> pd.DataFrame:
     db_path = Path(db_path_str)
     with closing(connect_db(db_path)) as connection:
         return pd.read_sql_query(query, connection, params=params or ())
 
 
 @st.cache_data(show_spinner=False)
-def fetch_scalar(db_path_str: str, query: str, params: Sequence[object] | None = None, default: float = 0.0) -> float:
+def fetch_scalar(
+    db_path_str: str,
+    query: str,
+    params: Sequence[object] | None = None,
+    default: float = 0.0,
+) -> float:
     db_path = Path(db_path_str)
     with closing(connect_db(db_path)) as connection:
         cursor = connection.execute(query, params or ())
@@ -580,7 +600,9 @@ def fetch_scalar(db_path_str: str, query: str, params: Sequence[object] | None =
 
 @st.cache_data(show_spinner=False)
 def table_row_count(db_path_str: str, table_name: str) -> int:
-    return int(fetch_scalar(db_path_str, f"SELECT COUNT(*) FROM {table_name}", default=0))
+    return int(
+        fetch_scalar(db_path_str, f"SELECT COUNT(*) FROM {table_name}", default=0)
+    )
 
 
 @st.cache_data(show_spinner=False)
@@ -626,7 +648,9 @@ def get_profile_summary(db_path_str: str) -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def get_items_summary(db_path_str: str, item_id: int | None = None, item_name: str = "") -> pd.DataFrame:
+def get_items_summary(
+    db_path_str: str, item_id: int | None = None, item_name: str = ""
+) -> pd.DataFrame:
     clauses: list[str] = []
     params: list[object] = []
     if item_id is not None:
@@ -644,7 +668,7 @@ def get_items_summary(db_path_str: str, item_id: int | None = None, item_name: s
             retailer,
             associate_link,
             price,
-            {', '.join(SCORE_FIELDS)}
+            {", ".join(SCORE_FIELDS)}
         FROM items
         {where_sql}
         ORDER BY item_id
@@ -678,18 +702,26 @@ def get_sales_summary(db_path_str: str) -> pd.DataFrame:
 def get_item_score_averages(db_path_str: str) -> pd.Series:
     query = f"SELECT {', '.join(f'AVG({field}) AS {field}' for field in SCORE_FIELDS)} FROM items"
     frame = fetch_dataframe(db_path_str, query)
-    return frame.iloc[0] if not frame.empty else pd.Series({field: 0.0 for field in SCORE_FIELDS})
+    return (
+        frame.iloc[0]
+        if not frame.empty
+        else pd.Series({field: 0.0 for field in SCORE_FIELDS})
+    )
 
 
 @st.cache_data(show_spinner=False)
 def get_sold_item_score_averages(db_path_str: str) -> pd.Series:
     query = f"""
-        SELECT {', '.join(f'AVG(i.{field}) AS {field}' for field in SCORE_FIELDS)}
+        SELECT {", ".join(f"AVG(i.{field}) AS {field}" for field in SCORE_FIELDS)}
         FROM sales s
         INNER JOIN items i ON i.item_id = s.item_id
     """
     frame = fetch_dataframe(db_path_str, query)
-    return frame.iloc[0] if not frame.empty else pd.Series({field: 0.0 for field in SCORE_FIELDS})
+    return (
+        frame.iloc[0]
+        if not frame.empty
+        else pd.Series({field: 0.0 for field in SCORE_FIELDS})
+    )
 
 
 @st.cache_data(show_spinner=False)
@@ -724,7 +756,7 @@ def get_sales_price_bands(db_path_str: str) -> pd.DataFrame:
         FROM ranked
         GROUP BY price_band
         ORDER BY price_band
-    """ 
+    """
     # the sql stikes back with the fancy window function to create price bands; this is used for the sales price distribution chart
     return fetch_dataframe(db_path_str, query)
 
@@ -736,7 +768,9 @@ def get_table_schema(db_path_str: str, table_name: str) -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def get_table_preview(db_path_str: str, table_name: str, limit: int = 25) -> pd.DataFrame:
+def get_table_preview(
+    db_path_str: str, table_name: str, limit: int = 25
+) -> pd.DataFrame:
     query = f"SELECT * FROM {table_name} ORDER BY 1 LIMIT {int(limit)}"
     return fetch_dataframe(db_path_str, query)
 
@@ -765,7 +799,9 @@ def get_item_names(db_path_str: str) -> pd.DataFrame:
 
 
 def render_sidebar() -> str:
-    st.sidebar.markdown(f'<div class="sidebar-brand">{APP_TITLE}</div>', unsafe_allow_html=True)
+    st.sidebar.markdown(
+        f'<div class="sidebar-brand">{APP_TITLE}</div>', unsafe_allow_html=True
+    )
     # Render navigation as large, styled buttons so they are clickable
     if "nav_page" not in st.session_state:
         st.session_state["nav_page"] = NAV_PAGES[0]
@@ -781,7 +817,11 @@ def render_sidebar() -> str:
     st.sidebar.markdown('<div style="height: 0.5rem"></div>', unsafe_allow_html=True)
     page = st.session_state.get("nav_page", NAV_PAGES[0])
     st.sidebar.markdown('<div style="height: 0.75rem"></div>', unsafe_allow_html=True)
-    db_override = st.sidebar.text_input("Database path", value=str(get_db_path()), help="Defaults to giftyfy.db beside app.py")
+    db_override = st.sidebar.text_input(
+        "Database path",
+        value=str(get_db_path()),
+        help="Defaults to giftyfy.db beside app.py",
+    )
     st.session_state["db_path"] = db_override
     return page
 
@@ -872,14 +912,23 @@ def render_dashboard_page(db_path: Path) -> None:
     total_items = counts["items"]
 
     avg_sale_price = float(sales_df["sale_price"].mean()) if not sales_df.empty else 0.0
-    avg_commission = float(sales_df["commission_rate"].mean()) if not sales_df.empty else 0.0
-    avg_commission_amount = float((sales_df["sale_price"] * sales_df["commission_rate"]).mean()) if not sales_df.empty else 0.0
+    avg_commission = (
+        float(sales_df["commission_rate"].mean()) if not sales_df.empty else 0.0
+    )
+    avg_commission_amount = (
+        float((sales_df["sale_price"] * sales_df["commission_rate"]).mean())
+        if not sales_df.empty
+        else 0.0
+    )
     total_profit = float(sales_df["profit"].sum()) if not sales_df.empty else 0.0
 
-    st.markdown('<div class="section-title" style="text-align:center; margin-bottom: 1rem;">DASHBOARD</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title" style="text-align:center; margin-bottom: 1rem;">DASHBOARD</div>',
+        unsafe_allow_html=True,
+    )
 
     left_col, middle_col, right_col = st.columns([1.1, 1.55, 1.08], gap="large")
-# I love life 
+    # I love life
     with left_col:
         render_small_metric("number of users", f"{total_users} users")
         st.markdown('<div style="height: 0.8rem"></div>', unsafe_allow_html=True)
@@ -890,16 +939,23 @@ def render_dashboard_page(db_path: Path) -> None:
     with middle_col:
         render_small_metric("avrg sale price", f"${avg_sale_price:,.0f}", tone="teal")
         st.markdown('<div style="height: 0.8rem"></div>', unsafe_allow_html=True)
-        render_small_metric("average comision rate", f"{avg_commission:.0%}", tone="teal")
+        render_small_metric(
+            "average comision rate", f"{avg_commission:.0%}", tone="teal"
+        )
         st.markdown('<div style="height: 0.8rem"></div>', unsafe_allow_html=True)
-        render_small_metric("average comision", f"${avg_commission_amount:,.1f}", tone="teal")
+        render_small_metric(
+            "average comision", f"${avg_commission_amount:,.1f}", tone="teal"
+        )
         st.markdown('<div style="height: 0.8rem"></div>', unsafe_allow_html=True)
         render_small_metric("number of sales", f"{total_sales}", tone="teal")
         st.markdown('<div style="height: 0.8rem"></div>', unsafe_allow_html=True)
         st.markdown('<div class="table-card">', unsafe_allow_html=True)
-        st.markdown('<div style="font-size:1.1rem; font-weight:800; margin-bottom:0.45rem;">users table here</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div style="font-size:1.1rem; font-weight:800; margin-bottom:0.45rem;">users table here</div>',
+            unsafe_allow_html=True,
+        )
         st.dataframe(users_df, use_container_width=True, height=250, hide_index=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with right_col:
         item_avg_scores = get_item_score_averages(str(db_path))
@@ -948,7 +1004,11 @@ def render_dashboard_page(db_path: Path) -> None:
             showlegend=False,
             title_x=0.04,
         )
-        chart1.update_traces(textposition="outside", textinfo="label+percent", marker=dict(line=dict(color="#b5628e", width=1)))
+        chart1.update_traces(
+            textposition="outside",
+            textinfo="label+percent",
+            marker=dict(line=dict(color="#b5628e", width=1)),
+        )
 
         chart2 = px.pie(
             sold_pie_df,
@@ -966,24 +1026,44 @@ def render_dashboard_page(db_path: Path) -> None:
             showlegend=False,
             title_x=0.04,
         )
-        chart2.update_traces(textposition="outside", textinfo="label+percent", marker=dict(line=dict(color="#b5628e", width=1)))
+        chart2.update_traces(
+            textposition="outside",
+            textinfo="label+percent",
+            marker=dict(line=dict(color="#b5628e", width=1)),
+        )
 
-        st.plotly_chart(chart1, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(
+            chart1, use_container_width=True, config={"displayModeBar": False}
+        )
         st.markdown('<div style="height: 1rem"></div>', unsafe_allow_html=True)
-        st.plotly_chart(chart2, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(
+            chart2, use_container_width=True, config={"displayModeBar": False}
+        )
 
 
 def render_items_page(db_path: Path) -> None:
-    st.markdown('<div class="section-title" style="text-align:center; margin-bottom: 1rem;">ITEMS</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title" style="text-align:center; margin-bottom: 1rem;">ITEMS</div>',
+        unsafe_allow_html=True,
+    )
 
-    left_col, right_col = st.columns([1.28, 1.0], gap="large") # majic number for fun
+    left_col, right_col = st.columns([1.28, 1.0], gap="large")  # majic number for fun
 
     with left_col:
         # Big header card containing the ID input
         st.markdown('<div class="search-card">', unsafe_allow_html=True)
-        st.markdown('<div style="font-size:2rem; font-weight:800; text-align:center; padding:0.6rem 0;">user input</div>', unsafe_allow_html=True)
-        item_id = st.number_input("query by ID", min_value=0, step=1, value=0, help="Enter an item_id to narrow the item search")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div style="font-size:2rem; font-weight:800; text-align:center; padding:0.6rem 0;">user input</div>',
+            unsafe_allow_html=True,
+        )
+        item_id = st.number_input(
+            "query by ID",
+            min_value=0,
+            step=1,
+            value=0,
+            help="Enter an item_id to narrow the item search",
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
         st.markdown('<div style="height: 1rem"></div>', unsafe_allow_html=True)
 
         # Compact card below for the name search and autocomplete chips
@@ -991,7 +1071,12 @@ def render_items_page(db_path: Path) -> None:
         if "item_name_query" not in st.session_state:
             st.session_state["item_name_query"] = ""
 
-        item_name_query = st.text_input("query by name", value=st.session_state.get("item_name_query", ""), key="item_name_query", placeholder="Type to filter suggestions (autocomplete)")
+        item_name_query = st.text_input(
+            "query by name",
+            value=st.session_state.get("item_name_query", ""),
+            key="item_name_query",
+            placeholder="Type to filter suggestions (autocomplete)",
+        )
 
         try:
             names_df = get_item_names(str(db_path))
@@ -1009,20 +1094,25 @@ def render_items_page(db_path: Path) -> None:
         # render suggestion buttons in rows of 3; clicking a chip fills the text input.
         if suggestions:
             chips_per_row = 3
-            cols = [st.columns(chips_per_row) for _ in range((len(suggestions) + chips_per_row - 1) // chips_per_row)]
+            cols = [
+                st.columns(chips_per_row)
+                for _ in range((len(suggestions) + chips_per_row - 1) // chips_per_row)
+            ]
             for idx, s in enumerate(suggestions):
                 row = cols[idx // chips_per_row]
                 col = row[idx % chips_per_row]
                 if col.button(s, key=f"suggest_{idx}"):
                     st.session_state["item_name_query"] = s
 
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
         # Use the current query value (which may have been set by clicking a chip)
         item_name = st.session_state.get("item_name_query", "")
 
         search_id = int(item_id) if item_id > 0 else None
-        results = get_items_summary(str(db_path), item_id=search_id, item_name=item_name)
+        results = get_items_summary(
+            str(db_path), item_id=search_id, item_name=item_name
+        )
         if results.empty:
             st.markdown(
                 """
@@ -1039,24 +1129,44 @@ def render_items_page(db_path: Path) -> None:
             render_info_pair("item ID", str(int(selected["item_id"])))
             render_info_pair("Item name", str(selected["item_name"]))
             render_info_pair("retailer", str(selected["retailer"] or ""))
-            st.markdown('<div class="item-detail-row"><span>associate link</span><span class="item-link">', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="item-detail-row"><span>associate link</span><span class="item-link">',
+                unsafe_allow_html=True,
+            )
             associate_link = str(selected["associate_link"] or "")
             if associate_link:
-                st.markdown(f"<a href='{associate_link}' target='_blank'>{associate_link}</a>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<a href='{associate_link}' target='_blank'>{associate_link}</a>",
+                    unsafe_allow_html=True,
+                )
             else:
                 st.markdown("<span>None</span>", unsafe_allow_html=True)
-            st.markdown('</span></div>', unsafe_allow_html=True)
-            render_info_pair("price", f"${float(selected['price']):,.2f}" if pd.notna(selected["price"]) else "")
-            st.markdown('</div>', unsafe_allow_html=True)
-# I will not k*** myself, I will not k*** myslef, it is only a small amout of python, 1000 lines in and i will not k*** myself.
+            st.markdown("</span></div>", unsafe_allow_html=True)
+            render_info_pair(
+                "price",
+                f"${float(selected['price']):,.2f}"
+                if pd.notna(selected["price"])
+                else "",
+            )
+            st.markdown("</div>", unsafe_allow_html=True)
+    # I will not k*** myself, I will not k*** myslef, it is only a small amout of python, 1000 lines in and i will not k*** myself.
     with right_col:
         st.markdown('<div class="scroll-card">', unsafe_allow_html=True)
         if results.empty:
-            st.markdown('<div style="font-size: 1.4rem; font-weight: 800; margin-bottom: 0.6rem;">score metrics</div>', unsafe_allow_html=True)
-            st.markdown('<div class="small-note">No item selected.</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div style="font-size: 1.4rem; font-weight: 800; margin-bottom: 0.6rem;">score metrics</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                '<div class="small-note">No item selected.</div>',
+                unsafe_allow_html=True,
+            )
         else:
             row = results.iloc[0]
-            st.markdown('<div style="font-size: 1.4rem; font-weight: 800; margin-bottom: 0.6rem;">score metrics</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div style="font-size: 1.4rem; font-weight: 800; margin-bottom: 0.6rem;">score metrics</div>',
+                unsafe_allow_html=True,
+            )
             for field in SCORE_FIELDS:
                 label = field.replace("_score", "").replace("_", " ").title()
                 value = int(row[field]) if pd.notna(row[field]) else 0
@@ -1064,11 +1174,14 @@ def render_items_page(db_path: Path) -> None:
                     f'<div class="score-item"><span>• {label}</span><span>{value}</span></div>',
                     unsafe_allow_html=True,
                 )
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_tables_page(db_path: Path) -> None:
-    st.markdown('<div class="section-title" style="text-align:center; margin-bottom: 1rem;">DATABASE TABLES</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title" style="text-align:center; margin-bottom: 1rem;">DATABASE TABLES</div>',
+        unsafe_allow_html=True,
+    )
 
     counts = get_metric_counts(str(db_path))
     kpi_cols = st.columns(4, gap="small")
@@ -1094,14 +1207,20 @@ def render_tables_page(db_path: Path) -> None:
     left, right = st.columns([0.9, 1.1], gap="large")
     with left:
         st.markdown('<div class="table-card">', unsafe_allow_html=True)
-        st.markdown(f'<div style="font-size:1.25rem; font-weight:800; margin-bottom:0.5rem;">{SCHEMA_DISPLAY_NAMES[table_name]} schema</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div style="font-size:1.25rem; font-weight:800; margin-bottom:0.5rem;">{SCHEMA_DISPLAY_NAMES[table_name]} schema</div>',
+            unsafe_allow_html=True,
+        )
         st.dataframe(schema, use_container_width=True, hide_index=True, height=300)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
     with right:
         st.markdown('<div class="table-card">', unsafe_allow_html=True)
-        st.markdown(f'<div style="font-size:1.25rem; font-weight:800; margin-bottom:0.5rem;">{SCHEMA_DISPLAY_NAMES[table_name]} preview</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div style="font-size:1.25rem; font-weight:800; margin-bottom:0.5rem;">{SCHEMA_DISPLAY_NAMES[table_name]} preview</div>',
+            unsafe_allow_html=True,
+        )
         st.dataframe(preview, use_container_width=True, hide_index=True, height=300)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_not_found_state(db_path: Path) -> None:
@@ -1121,7 +1240,12 @@ def render_not_found_state(db_path: Path) -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title=APP_TITLE, page_icon="🎁", layout="wide", initial_sidebar_state="expanded")
+    st.set_page_config(
+        page_title=APP_TITLE,
+        page_icon="🎁",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
     apply_global_style()
     page = render_sidebar()
     db_path = get_db_path()
@@ -1154,6 +1278,7 @@ def main() -> None:
         st.error(f"SQLite error while loading {page.lower()} view: {exc}")
     except Exception as exc:  # noqa: BLE001
         st.error(f"Unexpected error while rendering {page.lower()} view: {exc}")
+
 
 # now you can take your keyboard out you ass, the pyhton shitshow is over
 
