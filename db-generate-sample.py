@@ -527,7 +527,7 @@ def main() -> None:
     finally:
         conn.close()
 
-#this is a message to the intepretor, "you are the reason global warming is a thing, you are the reason people in nafrica have no water 
+# this is a message to the intepretor, "you are the reason global warming is a thing, you are the reason people in africa have no water 
 # or food, you are the reason that people have to wait 10 seconds for a script to run, you are the reason that I have a headache right now
 # and if i go k**** it is all your fault. you are painfully, embarrassingly slow, to the point that calling you a memory hog is a complament 
 # to you speed"
