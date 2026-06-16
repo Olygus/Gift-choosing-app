@@ -61,17 +61,21 @@ SCORE_FIELDS = [
     "movies_media_score",
 ]
 
+# Matches the 10 sliders in calculator.cpp (electronics, home, personal_care,
+# wearables, luxury, children, pet, car, outdoor, creative).
 GROUPED_SCORE_FIELDS = {
-    "Tech": [
+    "Electronics": [
         "computing_devices_score",
         "peripherals_score",
         "displays_score",
         "storage_electronics_score",
         "audio_score",
         "video_score",
-        "wearables_tech_score",
         "accessories_electronics_score",
         "power_charging_score",
+    ],
+    "Wearables": [
+        "wearables_tech_score",
     ],
     "Home": [
         "furniture_score",
@@ -80,101 +84,60 @@ GROUPED_SCORE_FIELDS = {
         "cleaning_score",
         "home_organization_score",
     ],
-    "Lifestyle": [
+    "Personal Care": [
         "skincare_score",
         "personal_hygiene_score",
         "men_fashion_score",
         "women_fashion_score",
-        "children_fashion_score",
         "fashion_general_score",
+    ],
+    "Luxury": [
         "jewelry_score",
         "luxury_score",
-        "books_score",
-        "music_instruments_score",
-        "movies_media_score",
     ],
-    "Practical": [
+    "Children": [
         "toys_score",
         "educational_toys_score",
         "games_puzzles_score",
         "baby_gear_score",
+        "children_fashion_score",
+    ],
+    "Pets": [
         "pet_toys_score",
         "pet_health_score",
+    ],
+    "Car": [
         "car_accessories_score",
         "car_vehicle_score",
         "power_tools_score",
         "hand_tools_score",
         "industrial_score",
         "safety_score",
+    ],
+    "Outdoor": [
         "gardening_supplies_score",
         "outdoor_score",
         "camping_score",
         "fitness_score",
     ],
+    "Creative": [
+        "books_score",
+        "music_instruments_score",
+        "movies_media_score",
+    ],
 }
 
-CATEGORY_GROUPS = [
-    (
-        "Electronics",
-        [
-            "computing_devices_score",
-            "peripherals_score",
-            "displays_score",
-            "storage_electronics_score",
-            "audio_score",
-            "video_score",
-            "wearables_tech_score",
-            "accessories_electronics_score",
-            "power_charging_score",
-        ],
-    ),
-    (
-        "Home",
-        [
-            "furniture_score",
-            "home_decor_score",
-            "storage_home_score",
-            "cleaning_score",
-            "home_organization_score",
-        ],
-    ),
-    (
-        "Care",
-        [
-            "skincare_score",
-            "personal_hygiene_score",
-            "men_fashion_score",
-            "women_fashion_score",
-            "children_fashion_score",
-            "fashion_general_score",
-        ],
-    ),
-    (
-        "Family",
-        [
-            "jewelry_score",
-            "luxury_score",
-            "toys_score",
-            "educational_toys_score",
-            "games_puzzles_score",
-            "baby_gear_score",
-            "pet_toys_score",
-            "pet_health_score",
-            "car_accessories_score",
-            "car_vehicle_score",
-            "power_tools_score",
-            "hand_tools_score",
-            "industrial_score",
-            "safety_score",
-            "gardening_supplies_score",
-            "outdoor_score",
-            "camping_score",
-            "fitness_score",
-            "books_score",
-            "music_instruments_score",
-            "movies_media_score",
-        ],
-    ),
+CATEGORY_COLORS = [
+    "#4d7cf0",
+    "#ab8ef4",
+    "#f2bc67",
+    "#ffd84d",
+    "#4a7a64",
+    "#4d8d97",
+    "#e2826b",
+    "#8ec97d",
+    "#f29ed1",
+    "#9fa8ff",
 ]
 
 SCHEMA_DISPLAY_NAMES = {
@@ -281,8 +244,6 @@ def apply_global_style() -> None:
 
         .metric-card,
         .chart-card,
-        .table-card,
-        .search-card,
         .item-detail-card,
         .scroll-card,
         .home-card {
@@ -331,29 +292,9 @@ def apply_global_style() -> None:
             min-height: 25rem;
         }
 
-        .table-card {
-            background: var(--card-teal);
-        }
-
-        .search-card {
-            background: #4f8d93;
-            border: 7px solid rgba(132, 185, 106, 0.95);
-            min-height: 8rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff4d6;
-            font-size: 2rem;
-            font-weight: 800;
-        }
-
-        .search-card.compact {
-            min-height: 6rem;
-        }
-
         .item-detail-card {
             background: var(--card-orange);
-            color: #fff5d0;
+            color: #000000;
             border-radius: 2rem;
         }
 
@@ -383,9 +324,12 @@ def apply_global_style() -> None:
         .scroll-card {
             background: var(--sidebar);
             color: #fff3d5;
-            max-height: 58vh;
+            height: 100%;
+            min-height: 58vh;
+            max-height: 80vh;
             overflow-y: auto;
             border-radius: 1rem;
+            box-sizing: border-box;
         }
 
         .score-item {
@@ -527,25 +471,68 @@ def apply_global_style() -> None:
             color: var(--muted);
             font-size: 0.95rem;
         }
-        /* Make Streamlit input widgets visually overlap the search-card so they
-           appear inside the styled card element. This keeps labels and inputs
-           readable while preserving Streamlit's DOM structure. */
-        .search-card {
-            position: relative;
-            padding-bottom: 2.6rem;
+
+        /* Make items page right column (score metrics) stretch to fill left column height */
+        div[data-testid="column"]:has(.scroll-card) {
+            display: flex;
+            flex-direction: column;
         }
 
-        .search-card.compact {
-            padding-bottom: 1.6rem;
+        div[data-testid="column"]:has(.scroll-card) > div[data-testid="stVerticalBlock"] {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* Pull the immediate following Streamlit input blocks upward into the card */
-        .search-card + div .stNumberInput,
-        .search-card + div .stTextInput,
-        .search-card.compact + div .stTextInput {
-            margin-top: -2.4rem !important;
-            position: relative;
-            z-index: 3;
+        div[data-testid="column"]:has(.scroll-card) .scroll-card {
+            flex: 1;
+        }
+        /* Streamlit renders each st.markdown/widget call as its own sibling
+           block, so a <div> opened in one call and closed in another never
+           actually wraps the widgets placed in between - it just floats
+           there empty while the real content renders alongside it.
+           To get a real card around live widgets (inputs, dataframes), we
+           put a hidden marker inside a st.container() and use :has() to
+           style that container's own wrapper instead. */
+        .card-marker {
+            display: none;
+        }
+
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-card-marker) {
+            background: #4f8d93;
+            border: 7px solid rgba(132, 185, 106, 0.95);
+            border-radius: 1.6rem;
+            padding: 1rem 1.1rem;
+            color: #fff4d6;
+        }
+
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-card-compact-marker) {
+            background: #4f8d93;
+            border: 7px solid rgba(132, 185, 106, 0.95);
+            border-radius: 1.6rem;
+            padding: 1rem 1.1rem 0.4rem;
+            color: #fff4d6;
+        }
+
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.table-card-marker) {
+            background: var(--card-teal);
+            border: none;
+            border-radius: 1.6rem;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset;
+        }
+
+        /* Beveled square (heavily rounded) corners on Plotly chart containers */
+        div[data-testid="stPlotlyChart"] {
+            border-radius: 2.8rem !important;
+            overflow: hidden !important;
+        }
+        div[data-testid="stPlotlyChart"] > div,
+        div[data-testid="stPlotlyChart"] .js-plotly-plot,
+        div[data-testid="stPlotlyChart"] .plot-container,
+        div[data-testid="stPlotlyChart"] iframe {
+            border-radius: 2.8rem !important;
+            overflow: hidden !important;
         }
         </style>
         """,
@@ -838,18 +825,6 @@ def render_small_metric(label: str, value: str, tone: str = "green") -> None:
     )
 
 
-def render_info_pair(label: str, value: str) -> None:
-    st.markdown(
-        f"""
-        <div class="item-detail-row">
-            <span>{label}</span>
-            <span>{value}</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
 def render_home_page() -> None:
     st.markdown(f'<div class="hero-title">WELCOME</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">ABOUT US</div>', unsafe_allow_html=True)
@@ -927,8 +902,9 @@ def render_dashboard_page(db_path: Path) -> None:
         unsafe_allow_html=True,
     )
 
-    left_col, middle_col, right_col = st.columns([1.1, 1.55, 1.08], gap="large")
-    # I love life
+    # Single row: left metrics | middle metrics | charts (all start at the same top)
+    left_col, middle_col, chart_col = st.columns([1.1, 1.55, 1.08], gap="large")
+
     with left_col:
         render_small_metric("number of users", f"{total_users} users")
         st.markdown('<div style="height: 0.8rem"></div>', unsafe_allow_html=True)
@@ -946,18 +922,27 @@ def render_dashboard_page(db_path: Path) -> None:
         render_small_metric(
             "average comision", f"${avg_commission_amount:,.1f}", tone="teal"
         )
-        st.markdown('<div style="height: 0.8rem"></div>', unsafe_allow_html=True)
+
+    st.markdown('<div style="height: 1rem"></div>', unsafe_allow_html=True)
+    wide_col, _ = st.columns([1.1 + 1.55, 1.08], gap="large")
+
+    with wide_col:
         render_small_metric("number of sales", f"{total_sales}", tone="teal")
         st.markdown('<div style="height: 0.8rem"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="table-card">', unsafe_allow_html=True)
-        st.markdown(
-            '<div style="font-size:1.1rem; font-weight:800; margin-bottom:0.45rem;">users table here</div>',
-            unsafe_allow_html=True,
-        )
-        st.dataframe(users_df, use_container_width=True, height=250, hide_index=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown(
+                '<span class="card-marker table-card-marker"></span>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                '<div style="font-size:1.1rem; font-weight:800; margin-bottom:0.45rem;">users table here</div>',
+                unsafe_allow_html=True,
+            )
+            st.dataframe(
+                users_df, use_container_width=True, height=250, hide_index=True
+            )
 
-    with right_col:
+    with chart_col:
         item_avg_scores = get_item_score_averages(str(db_path))
         sold_avg_scores = get_sold_item_score_averages(str(db_path))
 
@@ -993,20 +978,30 @@ def render_dashboard_page(db_path: Path) -> None:
             values="score",
             names="category",
             hole=0.0,
-            color_discrete_sequence=["#4d7cf0", "#ab8ef4", "#f2bc67", "#ffd84d"],
+            color_discrete_sequence=CATEGORY_COLORS,
+        )
+        _legend_cfg = dict(
+            font=dict(size=10),
+            orientation="v",
+            x=1.01,
+            y=0.5,
+            xanchor="left",
+            yanchor="middle",
         )
         chart1.update_layout(
             title="items score distribution",
             paper_bgcolor="#b5628e",
             plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#f7e8c2", size=13),
-            margin=dict(l=10, r=10, t=44, b=10),
-            showlegend=False,
+            font=dict(color="#f7e8c2", size=12),
+            margin=dict(l=0, r=0, t=40, b=0),
+            height=340,
+            showlegend=True,
+            legend=_legend_cfg,
             title_x=0.04,
         )
         chart1.update_traces(
-            textposition="outside",
-            textinfo="label+percent",
+            textposition="inside",
+            textinfo="percent",
             marker=dict(line=dict(color="#b5628e", width=1)),
         )
 
@@ -1015,27 +1010,29 @@ def render_dashboard_page(db_path: Path) -> None:
             values="score",
             names="category",
             hole=0.0,
-            color_discrete_sequence=["#4d7cf0", "#ab8ef4", "#f2bc67", "#ffd84d"],
+            color_discrete_sequence=CATEGORY_COLORS,
         )
         chart2.update_layout(
             title="sold items score distribution",
             paper_bgcolor="#b5628e",
             plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#f7e8c2", size=13),
-            margin=dict(l=10, r=10, t=44, b=10),
-            showlegend=False,
+            font=dict(color="#f7e8c2", size=12),
+            margin=dict(l=0, r=0, t=40, b=0),
+            height=340,
+            showlegend=True,
+            legend=_legend_cfg,
             title_x=0.04,
         )
         chart2.update_traces(
-            textposition="outside",
-            textinfo="label+percent",
+            textposition="inside",
+            textinfo="percent",
             marker=dict(line=dict(color="#b5628e", width=1)),
         )
 
         st.plotly_chart(
             chart1, use_container_width=True, config={"displayModeBar": False}
         )
-        st.markdown('<div style="height: 1rem"></div>', unsafe_allow_html=True)
+        st.markdown('<div style="height: 0.5rem"></div>', unsafe_allow_html=True)
         st.plotly_chart(
             chart2, use_container_width=True, config={"displayModeBar": False}
         )
@@ -1051,63 +1048,80 @@ def render_items_page(db_path: Path) -> None:
 
     with left_col:
         # Big header card containing the ID input
-        st.markdown('<div class="search-card">', unsafe_allow_html=True)
-        st.markdown(
-            '<div style="font-size:2rem; font-weight:800; text-align:center; padding:0.6rem 0;">user input</div>',
-            unsafe_allow_html=True,
-        )
-        item_id = st.number_input(
-            "query by ID",
-            min_value=0,
-            step=1,
-            value=0,
-            help="Enter an item_id to narrow the item search",
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown(
+                '<span class="card-marker search-card-marker"></span>',
+                unsafe_allow_html=True,
+            )
+            # st.markdown(
+            #    '<div style="font-size:2rem; font-weight:800; text-align:center; padding:0.6rem 0;">user input</div>',
+            #    unsafe_allow_html=True,
+            # )
+            item_id = st.number_input(
+                "query by ID",
+                min_value=0,
+                step=1,
+                value=0,
+                help="Enter an item_id to narrow the item search",
+            )
         st.markdown('<div style="height: 1rem"></div>', unsafe_allow_html=True)
 
         # Compact card below for the name search and autocomplete chips
-        st.markdown('<div class="search-card compact">', unsafe_allow_html=True)
-        if "item_name_query" not in st.session_state:
-            st.session_state["item_name_query"] = ""
+        with st.container(border=True):
+            st.markdown(
+                '<span class="card-marker search-card-compact-marker"></span>',
+                unsafe_allow_html=True,
+            )
+            # Use a separate backing key so chip buttons can write to it
+            # without conflicting with the widget that owns "item_name_query".
+            if "_item_name_backing" not in st.session_state:
+                st.session_state["_item_name_backing"] = ""
 
-        item_name_query = st.text_input(
-            "query by name",
-            value=st.session_state.get("item_name_query", ""),
-            key="item_name_query",
-            placeholder="Type to filter suggestions (autocomplete)",
-        )
+            def _sync_from_widget() -> None:
+                st.session_state["_item_name_backing"] = st.session_state[
+                    "item_name_query"
+                ]
 
-        try:
-            names_df = get_item_names(str(db_path))
-        except Exception:
-            names_df = pd.DataFrame(columns=["item_id", "item_name"])
+            item_name_query = st.text_input(
+                "query by name",
+                value=st.session_state["_item_name_backing"],
+                key="item_name_query",
+                placeholder="Type to filter suggestions (autocomplete)",
+                on_change=_sync_from_widget,
+            )
 
-        suggestions: list[str] = []
-        if item_name_query and not names_df.empty:
-            lower = item_name_query.strip().lower()
-            mask = names_df["item_name"].str.lower().str.contains(lower, na=False)
-            suggestions = names_df.loc[mask, "item_name"].head(15).tolist()
-        elif not names_df.empty:
-            suggestions = names_df["item_name"].head(15).tolist()
+            try:
+                names_df = get_item_names(str(db_path))
+            except Exception:
+                names_df = pd.DataFrame(columns=["item_id", "item_name"])
 
-        # render suggestion buttons in rows of 3; clicking a chip fills the text input.
-        if suggestions:
-            chips_per_row = 3
-            cols = [
-                st.columns(chips_per_row)
-                for _ in range((len(suggestions) + chips_per_row - 1) // chips_per_row)
-            ]
-            for idx, s in enumerate(suggestions):
-                row = cols[idx // chips_per_row]
-                col = row[idx % chips_per_row]
-                if col.button(s, key=f"suggest_{idx}"):
-                    st.session_state["item_name_query"] = s
+            suggestions: list[str] = []
+            if item_name_query and not names_df.empty:
+                lower = item_name_query.strip().lower()
+                mask = names_df["item_name"].str.lower().str.contains(lower, na=False)
+                suggestions = names_df.loc[mask, "item_name"].head(15).tolist()
+            elif not names_df.empty:
+                suggestions = names_df["item_name"].head(15).tolist()
 
-        st.markdown("</div>", unsafe_allow_html=True)
+            # render suggestion buttons in rows of 3; clicking a chip fills the text input.
+            if suggestions:
+                chips_per_row = 3
+                cols = [
+                    st.columns(chips_per_row)
+                    for _ in range(
+                        (len(suggestions) + chips_per_row - 1) // chips_per_row
+                    )
+                ]
+                for idx, s in enumerate(suggestions):
+                    row = cols[idx // chips_per_row]
+                    col = row[idx % chips_per_row]
+                    if col.button(s, key=f"suggest_{idx}"):
+                        # Write to the backing key only -- never the widget key
+                        st.session_state["_item_name_backing"] = s
+                        st.rerun()
 
-        # Use the current query value (which may have been set by clicking a chip)
-        item_name = st.session_state.get("item_name_query", "")
+        # Use the backing key so chip selections are picked up immediately
+        item_name = st.session_state.get("_item_name_backing", "")
 
         search_id = int(item_id) if item_id > 0 else None
         results = get_items_summary(
@@ -1125,56 +1139,57 @@ def render_items_page(db_path: Path) -> None:
             )
         else:
             selected = results.iloc[0]
-            st.markdown('<div class="item-detail-card">', unsafe_allow_html=True)
-            render_info_pair("item ID", str(int(selected["item_id"])))
-            render_info_pair("Item name", str(selected["item_name"]))
-            render_info_pair("retailer", str(selected["retailer"] or ""))
-            st.markdown(
-                '<div class="item-detail-row"><span>associate link</span><span class="item-link">',
-                unsafe_allow_html=True,
-            )
             associate_link = str(selected["associate_link"] or "")
-            if associate_link:
-                st.markdown(
-                    f"<a href='{associate_link}' target='_blank'>{associate_link}</a>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown("<span>None</span>", unsafe_allow_html=True)
-            st.markdown("</span></div>", unsafe_allow_html=True)
-            render_info_pair(
-                "price",
+            link_html = (
+                f"<a href='{associate_link}' target='_blank'>{associate_link}</a>"
+                if associate_link
+                else "<span>None</span>"
+            )
+            price_value = (
                 f"${float(selected['price']):,.2f}"
                 if pd.notna(selected["price"])
-                else "",
+                else ""
             )
-            st.markdown("</div>", unsafe_allow_html=True)
-    # I will not k*** myself, I will not k*** myslef, it is only a small amout of python, 1000 lines in and i will not k*** myself.
-    with right_col:
-        st.markdown('<div class="scroll-card">', unsafe_allow_html=True)
-        if results.empty:
             st.markdown(
-                '<div style="font-size: 1.4rem; font-weight: 800; margin-bottom: 0.6rem;">score metrics</div>',
+                f"""
+                <div class="item-detail-card">
+                    <div class="item-detail-row"><span>item ID</span><span>{int(selected["item_id"])}</span></div>
+                    <div class="item-detail-row"><span>Item name</span><span>{selected["item_name"]}</span></div>
+                    <div class="item-detail-row"><span>retailer</span><span>{selected["retailer"] or ""}</span></div>
+                    <div class="item-detail-row"><span>associate link</span><span class="item-link">{link_html}</span></div>
+                    <div class="item-detail-row"><span>price</span><span>{price_value}</span></div>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
+    # I will not k*** myself, I will not k*** myslef, it is only a small amout of python, 1000 lines in and i will not k*** myself.
+    with right_col:
+        if results.empty:
             st.markdown(
-                '<div class="small-note">No item selected.</div>',
+                """
+                <div class="scroll-card">
+                    <div style="font-size: 1.4rem; font-weight: 800; margin-bottom: 0.6rem;">score metrics</div>
+                    <div class="small-note">No item selected.</div>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
         else:
             row = results.iloc[0]
+            score_rows = "".join(
+                f'<div class="score-item"><span>• {field.replace("_score", "").replace("_", " ").title()}</span>'
+                f"<span>{int(row[field]) if pd.notna(row[field]) else 0}</span></div>"
+                for field in SCORE_FIELDS
+            )
             st.markdown(
-                '<div style="font-size: 1.4rem; font-weight: 800; margin-bottom: 0.6rem;">score metrics</div>',
+                f"""
+                <div class="scroll-card">
+                    <div style="font-size: 1.4rem; font-weight: 800; margin-bottom: 0.6rem;">score metrics</div>
+                    {score_rows}
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
-            for field in SCORE_FIELDS:
-                label = field.replace("_score", "").replace("_", " ").title()
-                value = int(row[field]) if pd.notna(row[field]) else 0
-                st.markdown(
-                    f'<div class="score-item"><span>• {label}</span><span>{value}</span></div>',
-                    unsafe_allow_html=True,
-                )
-        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_tables_page(db_path: Path) -> None:
@@ -1206,21 +1221,27 @@ def render_tables_page(db_path: Path) -> None:
     preview = get_table_preview(str(db_path), table_name, limit=50)
     left, right = st.columns([0.9, 1.1], gap="large")
     with left:
-        st.markdown('<div class="table-card">', unsafe_allow_html=True)
-        st.markdown(
-            f'<div style="font-size:1.25rem; font-weight:800; margin-bottom:0.5rem;">{SCHEMA_DISPLAY_NAMES[table_name]} schema</div>',
-            unsafe_allow_html=True,
-        )
-        st.dataframe(schema, use_container_width=True, hide_index=True, height=300)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown(
+                '<span class="card-marker table-card-marker"></span>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f'<div style="font-size:1.25rem; font-weight:800; margin-bottom:0.5rem;">{SCHEMA_DISPLAY_NAMES[table_name]} schema</div>',
+                unsafe_allow_html=True,
+            )
+            st.dataframe(schema, use_container_width=True, hide_index=True, height=300)
     with right:
-        st.markdown('<div class="table-card">', unsafe_allow_html=True)
-        st.markdown(
-            f'<div style="font-size:1.25rem; font-weight:800; margin-bottom:0.5rem;">{SCHEMA_DISPLAY_NAMES[table_name]} preview</div>',
-            unsafe_allow_html=True,
-        )
-        st.dataframe(preview, use_container_width=True, hide_index=True, height=300)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown(
+                '<span class="card-marker table-card-marker"></span>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f'<div style="font-size:1.25rem; font-weight:800; margin-bottom:0.5rem;">{SCHEMA_DISPLAY_NAMES[table_name]} preview</div>',
+                unsafe_allow_html=True,
+            )
+            st.dataframe(preview, use_container_width=True, hide_index=True, height=300)
 
 
 def render_not_found_state(db_path: Path) -> None:
