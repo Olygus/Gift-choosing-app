@@ -4,9 +4,10 @@ gifty
 *.exe
 *.db
 
-# Python virtual environments
+# Python virtual environments and other yap
 .venv/
 venv/
+
 
 # Python cache/artifacts
 __pycache__/
@@ -20,6 +21,11 @@ __pycache__/
 # Local env files
 .env
 .env.*
+
+# PyInstaller build outputs
+build/
+dist/
+*.spec
 
 # you found this easter egg, now you get to marvel at its beauty!!      
 
