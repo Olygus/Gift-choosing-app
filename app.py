@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 # TODO
+# add instruction for app in README.md
 # fix the gap on the dashboard page
 # increase font size for subtitles
 # add logo image instead of emoji in the navigation
