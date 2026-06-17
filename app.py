@@ -1,6 +1,15 @@
 # the python shit show continued is broght to you by app.py
 from __future__ import annotations
 
+# TODO
+# fix the gap on the dashboard page
+# increase font size for subtitles
+# add logo image instead of emoji in the navigation
+# align warning and important labeles to the left
+# maybe change last-child font color to black
+# add color to tables with background = #color if needed
+# remove big ugly bar introduced with streamlit pyhton libery
+
 import os
 import sqlite3
 from contextlib import closing
@@ -61,8 +70,7 @@ SCORE_FIELDS = [
     "movies_media_score",
 ]
 
-# Matches the 10 sliders in calculator.cpp (electronics, home, personal_care,
-# wearables, luxury, children, pet, car, outdoor, creative).
+# Matches the 10 sliders in sql(electronics, home, personal_care, wearables, luxury, children, pet, car, outdoor, creative).
 GROUPED_SCORE_FIELDS = {
     "Electronics": [
         "computing_devices_score",
@@ -150,7 +158,7 @@ SCHEMA_DISPLAY_NAMES = {
 NAV_PAGES = ("Home", "Dashboard", "Items", "Tables")
 
 
-# when you think the css nighmare is over but this shit needs to be done, honestly iy is better that what i was cooking in c++
+# when you think the css nighmare is over but this shit needs to be done, honestly it is better that what i was cooking in c++
 def apply_global_style() -> None:
     st.markdown(
         """
@@ -307,12 +315,12 @@ def apply_global_style() -> None:
         }
 
         .item-detail-row span:first-child {
-            color: #fff1ca;
+            color: #3b3634;
             opacity: 0.95;
         }
 
         .item-detail-row span:last-child {
-            color: #fdf5df;
+            color: #f7e8c2;
         }
 
         .item-link a {
@@ -360,9 +368,7 @@ def apply_global_style() -> None:
             font-size: 2rem;
             font-weight: 900;
             margin: 0.85rem 0 0.3rem;
-        }
-
-        /* Sidebar navigation button styling */
+        } 
         section[data-testid="stSidebar"] div.stButton {
             margin: 0.1rem 0 !important;
         }
@@ -386,6 +392,7 @@ def apply_global_style() -> None:
             box-shadow: none !important;
             transition: background-color 140ms ease, border-color 140ms ease !important;
         }
+
 
         section[data-testid="stSidebar"] div.stButton > button:hover,
         section[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover {
@@ -422,7 +429,7 @@ def apply_global_style() -> None:
             background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
         }
         /* 
-        TODO: the gift is meant to be a logo for a phote, it is in canva rn and when it is doen cooking i will use it instead.
+        TODO: the gift is meant to be a logo for a phote, it is in canva rn and when it is done cooking i will use it instead.
         */
         .gift-box::before {
             content: "🎁";
@@ -472,7 +479,7 @@ def apply_global_style() -> None:
             font-size: 0.95rem;
         }
 
-        /* Make items page right column (score metrics) stretch to fill left column height */
+
         div[data-testid="column"]:has(.scroll-card) {
             display: flex;
             flex-direction: column;
@@ -491,9 +498,9 @@ def apply_global_style() -> None:
            block, so a <div> opened in one call and closed in another never
            actually wraps the widgets placed in between - it just floats
            there empty while the real content renders alongside it.
-           To get a real card around live widgets (inputs, dataframes), we
+           To get a real card around live widgets (inputs, dataframes), this is why i 
            put a hidden marker inside a st.container() and use :has() to
-           style that container's own wrapper instead. */
+           style that container's own wrapper instead. this is so stupid. */
         .card-marker {
             display: none;
         }
@@ -522,7 +529,7 @@ def apply_global_style() -> None:
             box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset;
         }
 
-        /* Beveled square (heavily rounded) corners on Plotly chart containers */
+
         div[data-testid="stPlotlyChart"] {
             border-radius: 2.8rem !important;
             overflow: hidden !important;
@@ -797,7 +804,7 @@ def render_sidebar() -> str:
     for p in NAV_PAGES:
         if st.sidebar.button(p, key=f"nav_{p}"):
             st.session_state["nav_page"] = p
-    # remove the dotted list; keep a divider and gift box only
+    # remove the dotted list and keept a divider and gift box only
     # I had a great idea to also use javascript here, i pushed that idea so deep in my arse that i forgot about it, this is the best case senario for my mental health
     st.sidebar.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
     st.sidebar.markdown('<div class="gift-box"></div>', unsafe_allow_html=True)
@@ -831,8 +838,11 @@ def render_home_page() -> None:
     st.markdown(
         """
         <div class="subtitle" style="text-align:center; max-width: 1100px; margin: 0 auto 1.4rem;">
-            Gyftyfy is a gift choosing assistant originally created as part of an enterprise computing assignment
-            and built around SQLite-backed user profiles, item scoring, and sales reporting.
+            Giftyfy is a gift choosing assistant originally created as part of an enterprise computing assignment 3
+            and built  to run locally with c++17, python, SQLite it suports many features such as allowing for many 
+            users who posses profiles, item scoring and an algorith that matches profiles with items based on a quiz 
+            which features questions and interactive sliders, and sales reporting and a dashboard to analyse user 
+            data sales.
         </div>
         """,
         unsafe_allow_html=True,
@@ -1066,13 +1076,12 @@ def render_items_page(db_path: Path) -> None:
             )
         st.markdown('<div style="height: 1rem"></div>', unsafe_allow_html=True)
 
-        # Compact card below for the name search and autocomplete chips
         with st.container(border=True):
             st.markdown(
                 '<span class="card-marker search-card-compact-marker"></span>',
                 unsafe_allow_html=True,
             )
-            # Use a separate backing key so chip buttons can write to it
+            # the reason i use a separate backing key so chip buttons can write to it
             # without conflicting with the widget that owns "item_name_query".
             if "_item_name_backing" not in st.session_state:
                 st.session_state["_item_name_backing"] = ""
@@ -1116,11 +1125,12 @@ def render_items_page(db_path: Path) -> None:
                     row = cols[idx // chips_per_row]
                     col = row[idx % chips_per_row]
                     if col.button(s, key=f"suggest_{idx}"):
-                        # Write to the backing key only -- never the widget key
+                        # only write to the backing key only and never the fkn never the widget key
                         st.session_state["_item_name_backing"] = s
                         st.rerun()
 
-        # Use the backing key so chip selections are picked up immediately
+        # use the backing key so chip selections are picked up immediately as per previous instructions
+        # yes i take my own advice whenever i want to (should be more often).
         item_name = st.session_state.get("_item_name_backing", "")
 
         search_id = int(item_id) if item_id > 0 else None
@@ -1202,8 +1212,8 @@ def render_tables_page(db_path: Path) -> None:
     kpi_cols = st.columns(4, gap="small")
     metric_specs = [
         ("Users", counts["users_login"], "green"),
-        ("Profiles", counts["user_profiles"], "teal"),
-        ("Items", counts["items"], "green"),
+        ("Profiles", counts["user_profiles"], "green"),
+        ("Items", counts["items"], "teal"),
         ("Sales", counts["sales"], "teal"),
     ]
     for column, (label, value, tone) in zip(kpi_cols, metric_specs, strict=False):
