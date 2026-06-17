@@ -304,8 +304,8 @@ struct RankedItem {
     double distance_squared; 
     double match_percentage; 
     
-    bool operator>(const RankedItem& other) const {
-        return distance_squared > other.distance_squared;
+    bool operator<(const RankedItem& other) const {
+        return distance_squared < other.distance_squared;
     }
 };
 
@@ -1781,7 +1781,7 @@ std::vector<RankedItem> buildRecommendations(const UserProfile& user_profile) {
     }
 
     std::vector<Item> database = loadItemsFromDatabase();
-    std::priority_queue<RankedItem, std::vector<RankedItem>, std::greater<RankedItem>> top_items;
+    std::priority_queue<RankedItem> top_items;
 
     // cant be asked to expain it in the read me but if you made it this far, here you go
     // it uses a weighted Euclidean distance on normalized scores.
