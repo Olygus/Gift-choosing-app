@@ -7,9 +7,9 @@ from __future__ import annotations
 # increase font size for subtitles
 # add logo image instead of emoji in the navigation
 # align warning and important labeles to the left
-# maybe change last-child font color to black
+# maybe change last-child font color to black, maybe it looks fine, will leave for now
 # add color to tables with background = #color if needed
-# remove big ugly bar introduced with streamlit pyhton libery
+# remove big ugly bar introduced with streamlit pyhton libery. i tried st.set_page_config stuff, didnt work, look into this again when I lose the urge to k*ll myself (this is a joke)
 
 import os
 import sqlite3
@@ -600,6 +600,9 @@ def table_row_count(db_path_str: str, table_name: str) -> int:
     )
 
 
+# return connection.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0], tried doing table_row now table_row_count as inlne but it kept throwing an error, screw it and this sh***********
+
+
 @st.cache_data(show_spinner=False)
 def get_users_summary(db_path_str: str) -> pd.DataFrame:
     query = """
@@ -673,6 +676,7 @@ def get_items_summary(
 
 @st.cache_data(show_spinner=False)
 def get_sales_summary(db_path_str: str) -> pd.DataFrame:
+    # yeah this is masically same as the last 2 iterations but i cant be asked to make generic, if you read this do it or you will regret it later
     query = """
         SELECT
             s.sale_id,
@@ -694,7 +698,9 @@ def get_sales_summary(db_path_str: str) -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def get_item_score_averages(db_path_str: str) -> pd.Series:
+def get_item_score_averages(
+    db_path_str: str,
+) -> pd.Series:  # no return type here, this i
     query = f"SELECT {', '.join(f'AVG({field}) AS {field}' for field in SCORE_FIELDS)} FROM items"
     frame = fetch_dataframe(db_path_str, query)
     return (

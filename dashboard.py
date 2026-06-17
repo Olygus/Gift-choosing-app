@@ -1,7 +1,8 @@
 import sys
-import os  # <-- Make sure this line is here!
+import os
 import subprocess
-import time
+
+# import time, sorry bro, but i replaced you with QTimer
 import socket
 from PyQt6.QtCore import QUrl, QTimer
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
@@ -40,7 +41,6 @@ class StreamlitWindow(QMainWindow):
         else:
             script_path = os.path.abspath("app.py")
 
-        # Launch the hidden Streamlit background process
         self.server_process = subprocess.Popen(
             [
                 "streamlit",
@@ -53,7 +53,7 @@ class StreamlitWindow(QMainWindow):
             stderr=subprocess.DEVNULL,
         )
 
-        self.check_timer = QTimer()
+        self.check_timer = QTimer()  # replacement for time.time(), who tf names these
         self.check_timer.timeout.connect(self.check_server_ready)
         self.check_timer.start(100)
 
@@ -67,6 +67,8 @@ class StreamlitWindow(QMainWindow):
             self.server_process.terminate()
         event.accept()
 
+
+# def not_gonna_Kill_myself(python): removed as i finished the fkn python
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
