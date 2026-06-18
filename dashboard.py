@@ -68,6 +68,8 @@ class StreamlitWindow(QMainWindow):
         event.accept()
 
 
+# failed to implement an iteration where the app runs on a headless server with self.server_process to avoid having to install streamlit on every machine
+
 # def not_gonna_Kill_myself(python): removed as i finished the fkn python
 
 if __name__ == "__main__":
