@@ -11,11 +11,11 @@ from __future__ import annotations
 # add color to tables with background = #color if needed
 # remove big ugly bar introduced with streamlit pyhton libery. i tried st.set_page_config stuff, didnt work, look into this again when I lose the urge to k*ll myself (this is a joke)
 
-import os
+# import os
 import sqlite3
 from contextlib import closing
 from pathlib import Path
-from typing import Iterable, Sequence
+# from typing import Iterable, Sequence
 
 import pandas as pd
 import plotly.express as px
