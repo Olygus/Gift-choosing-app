@@ -1,6 +1,6 @@
 # Giftyfy Calculator
 
-A gift choosing assistant originally created as part of assigment task 3 for enterprise computing made with a C++17 calculator and featuring SQLite3 integration.
+A gift choosing assistant originally created as part of assigment task 3 for enterprise computing made with a C++17 calculator and featuring SQLite3 integration and a python dashboard (streamlit with html and css).
 
 ## Compilation Instructions
 
@@ -86,7 +86,11 @@ This resets the sample tables and inserts users, profiles, items, and sales data
 
 Prerequisites
 - Python 3.8+ installed
+- Python environment  
 - `streamlit` (install into your virtual environment or system Python):
+- `pyinstaller` (optional for linux users, untested for windows)
+
+begin with installing the python libraries 
 
 ```bash
 pip install streamlit pandas plotly
@@ -97,7 +101,9 @@ Linux
 ```bash
 # from the folder where you cloned the repository:
 cd Gift-choosing-app
-# (optional) activate the project's venv if you created one:
+#create a venv if needed with 
+python3 -m venv .venv
+# activate the project's venv if you created one (use activate.fish if your have fish installed):
 source .venv/bin/activate
 # then run Streamlit
 python -m streamlit run app.py
@@ -105,6 +111,16 @@ python -m streamlit run app.py
 # OR run the venv python directly (useful when your path contains spaces):
 "./.venv/bin/python" -m streamlit run app.py
 ```
+
+```bash
+# alternatively you can run the app via pyinstaller (recommended but untested for windows)
+pip install pyinstaller
+# then in the same directory run
+pyinstaller --noconsole --onefile --name dashboard --add-data "app.py:." --add-data "giftyfy.db:." dahsboard.py
+# then launch it from the dist folder with 
+./dist/dashboard
+```
+
 
 Windows (PowerShell)
 
@@ -126,6 +142,7 @@ python -m streamlit run app.py
 
 Notes
 - If you created the virtual environment in a different location, replace the `.venv` path above with your environment's Python executable (quote the path if it contains spaces).
+- If you are having trouble using the pyinstaller, it is likely because you need to have your python environment active.
 - If you are using WSL, run the Linux commands from the WSL shell.
 - To run with the sample data (creates `giftyfy.db`), run the seeding script before launching the app:
 
