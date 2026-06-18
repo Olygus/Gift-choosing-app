@@ -1,2 +1,2 @@
-app.py linguist-documentation=true
-pages/*.py linguist-documentation=true
+app.py linguist-language=CSS
+
