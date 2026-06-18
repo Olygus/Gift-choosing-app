@@ -148,5 +148,8 @@ Notes
 
 ```bash
 python3 db-generate-sample.py giftyfy.db   # Linux/macOS
+```
+
+```bash
 python db-generate-sample.py giftyfy.db    # Windows
 ```
