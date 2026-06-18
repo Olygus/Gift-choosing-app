@@ -1,3 +1,1 @@
-app.py linguist-language=CSS/HTML
 sql linguist-language=SQL
-*.git/ linguist-vendored
