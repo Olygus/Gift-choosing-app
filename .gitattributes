@@ -1,2 +1,2 @@
-*.html linguist-detectable=true
-*.css linguist-detectable=true
+app.py linguist-documentation=true
+pages/*.py linguist-documentation=true
