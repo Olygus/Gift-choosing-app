@@ -15,44 +15,48 @@ import os
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+from assets.templates import (
+    sidebar_brand,
+    note_banner,
+    home_about_card,
+    home_usage_card,
+    users_table_header,
+)
 
 APP_TITLE = "Giftyfy"
 APP_SUBTITLE = "Gift choosing assistant"
 DEFAULT_DB_PATH = Path(__file__).with_name("giftyfy.db")
+NAV_PAGES = ("Home", "Dashboard", "Items", "Tables")
+SCHEMA_DISPLAY_NAMES = {
+    "users_login": "Users",
+    "user_profiles": "Profiles",
+    "items": "Items",
+    "sales": "Sales",
+}
 
 
-def get_asset_path(filename: str) -> Path:    bundle_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+def get_asset_path(filename: str) -> Path:
+    bundle_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
     return bundle_root / filename
 
 
-def ensure_streamlit_dark_theme() -> None:
-    """Create a user streamlit config enabling dark theme if not present.
-
-    This writes to ~/.streamlit/config.toml so the packaged one-file
-    executable will default to the dark theme for users who don't
-    already have a Streamlit config.
-    """
-    # best-effort helper: do not error if writing fails
+def apply_global_style() -> None:
     try:
-        cfg_dir = Path.home() / ".streamlit"
-        cfg_dir.mkdir(exist_ok=True)
-        cfg_file = cfg_dir / "config.toml"
-        if not cfg_file.exists():
-            cfg_text = """
-[theme]
-base = "dark"
-primaryColor = "#ffb561"
-backgroundColor = "#3b3634"
-secondaryBackgroundColor = "#4a4340"
-textColor = "#f7e8c2"
-"""
-            cfg_file.write_text(cfg_text)
+        css_path = get_asset_path("assets/style.css")
+        css = css_path.read_text(encoding="utf-8")
     except Exception:
-        # best-effort only; don't prevent the app from starting
-        pass
+        css = ""
+    if css:
+        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
+
+def ensure_streamlit_dark_theme() -> None:
+    return None
+
 
 TABLE_NAMES = ("users_login", "user_profiles", "items", "sales")
 
+# Item detail fields shown in the Items view.
 SCORE_FIELDS = [
     "computing_devices_score",
     "peripherals_score",
@@ -97,485 +101,69 @@ SCORE_FIELDS = [
     "movies_media_score",
 ]
 
-# Matches the 10 sliders in sql(electronics, home, personal_care, wearables, luxury, children, pet, car, outdoor, creative).
 GROUPED_SCORE_FIELDS = {
-    "Electronics": [
+    "Electronics": (
         "computing_devices_score",
         "peripherals_score",
         "displays_score",
         "storage_electronics_score",
         "audio_score",
         "video_score",
+        "wearables_tech_score",
         "accessories_electronics_score",
         "power_charging_score",
-    ],
-    "Wearables": [
-        "wearables_tech_score",
-    ],
-    "Home": [
+    ),
+    "Home": (
         "furniture_score",
         "home_decor_score",
         "storage_home_score",
         "cleaning_score",
         "home_organization_score",
-    ],
-    "Personal Care": [
-        "skincare_score",
-        "personal_hygiene_score",
+    ),
+    "Personal care": ("skincare_score", "personal_hygiene_score"),
+    "Fashion": (
         "men_fashion_score",
         "women_fashion_score",
+        "children_fashion_score",
         "fashion_general_score",
-    ],
-    "Luxury": [
-        "jewelry_score",
-        "luxury_score",
-    ],
-    "Children": [
+    ),
+    "Luxury": ("jewelry_score", "luxury_score"),
+    "Children": (
         "toys_score",
         "educational_toys_score",
         "games_puzzles_score",
         "baby_gear_score",
-        "children_fashion_score",
-    ],
-    "Pets": [
-        "pet_toys_score",
-        "pet_health_score",
-    ],
-    "Car": [
-        "car_accessories_score",
-        "car_vehicle_score",
+    ),
+    "Pets": ("pet_toys_score", "pet_health_score"),
+    "Car": ("car_accessories_score", "car_vehicle_score"),
+    "Outdoor": (
         "power_tools_score",
         "hand_tools_score",
         "industrial_score",
         "safety_score",
-    ],
-    "Outdoor": [
         "gardening_supplies_score",
         "outdoor_score",
         "camping_score",
         "fitness_score",
-    ],
-    "Creative": [
+    ),
+    "Creative": (
         "books_score",
         "music_instruments_score",
         "movies_media_score",
-    ],
+    ),
 }
-
 CATEGORY_COLORS = [
+    "#ffd166",
+    "#06d6a0",
+    "#118ab2",
+    "#f94144",
+    "#9b5de5",
+    "#f3722c",
+    "#90be6d",
     "#4d7cf0",
-    "#ab8ef4",
-    "#f2bc67",
-    "#ffd84d",
-    "#4a7a64",
-    "#4d8d97",
-    "#e2826b",
-    "#8ec97d",
-    "#f29ed1",
-    "#9fa8ff",
+    "#f9c74f",
+    "#43aa8b",
 ]
-
-SCHEMA_DISPLAY_NAMES = {
-    "users_login": "Users",
-    "user_profiles": "Profiles",
-    "items": "Items",
-    "sales": "Sales",
-}
-
-NAV_PAGES = ("Home", "Dashboard", "Items", "Tables")
-
-
-# when you think the css nighmare is over but this shit needs to be done, honestly it is better that what i was cooking in c++
-def apply_global_style() -> None:
-    st.markdown(
-        """
-        <style>
-        :root {
-            --bg: #3b3634;
-            --bg-elevated: #4a4340;
-            --sidebar: #d16413;
-            --card-green: #4a7a64;
-            --card-teal: #4d8d97;
-            --card-orange: #f2bc67;
-            --card-pink: #b5628e;
-            --panel: #f4bf68;
-            --text: #f7e8c2;
-            --muted: #e6d2a7;
-            --accent: #ffb561;
-            --grid: #ff9ea4;
-        }
-
-        html, body, [class*="css"]  {
-            font-family: "Trebuchet MS", "Segoe UI", sans-serif;
-        }
-
-        .stApp {
-            background: var(--bg);
-            color: var(--text);
-        }
-
-        section[data-testid="stSidebar"] {
-            background: var(--sidebar);
-        }
-
-        section[data-testid="stSidebar"] > div {
-            background: var(--sidebar);
-        }
-
-        footer {
-            display: none;
-        }
-
-        .block-container {
-            padding-top: 1.2rem;
-            padding-bottom: 1.2rem;
-        }
-
-        .page-shell {
-            background: var(--bg);
-            color: var(--text);
-        }
-
-        .hero-title {
-            text-align: center;
-            color: var(--accent);
-            font-size: clamp(2.8rem, 5vw, 4.6rem);
-            font-weight: 800;
-            letter-spacing: 0.03em;
-            margin: 0.25rem 0 0.4rem;
-        }
-
-        .section-title {
-            color: var(--accent);
-            font-size: clamp(2rem, 4vw, 3.4rem);
-            font-weight: 800;
-            margin: 0.15rem 0 0.4rem;
-            letter-spacing: 0.02em;
-        }
-
-        .subtitle {
-            color: var(--text);
-            /* increased for readability */
-            font-size: 1.35rem;
-            line-height: 1.6;
-        }
-
-        .note-banner {
-            display: inline-block;
-            background: #f0281e;
-            color: #fff4d7;
-            padding: 0.35rem 1rem;
-            border-radius: 0.3rem;
-            font-size: 2rem;
-            font-weight: 900;
-            letter-spacing: 0.02em;
-            margin-right: 0.65rem;
-        }
-
-        .note-line {
-            color: var(--accent);
-            font-size: 2rem;
-            font-weight: 800;
-        }
-
-        .metric-card,
-        .chart-card,
-        .item-detail-card,
-        .scroll-card,
-        .home-card {
-            border-radius: 1.6rem;
-            padding: 1rem 1.1rem;
-            box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset;
-        }
-
-        .metric-card {
-            background: var(--card-green);
-            color: var(--text);
-            text-align: center;
-            min-height: 7.1rem;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: 0.2rem;
-        }
-
-        .metric-card.teal {
-            background: var(--card-teal);
-        }
-
-        .metric-card.orange {
-            background: var(--card-orange);
-            color: #fff6d7;
-        }
-
-        .metric-card.pink {
-            background: var(--card-pink);
-        }
-
-        .metric-label {
-            font-size: clamp(1.05rem, 2vw, 1.55rem);
-            line-height: 1.1;
-        }
-
-        .metric-value {
-            font-size: clamp(1.45rem, 2.7vw, 2.2rem);
-            line-height: 1.05;
-            font-weight: 700;
-        }
-
-        .chart-card {
-            background: var(--card-pink);
-            min-height: 25rem;
-        }
-
-        .item-detail-card {
-            background: var(--card-orange);
-            color: #000000;
-            border-radius: 2rem;
-        }
-
-        .item-detail-row {
-            display: grid;
-            grid-template-columns: 0.95fr 1.1fr;
-            gap: 0.55rem;
-            font-size: 1.05rem;
-            margin-bottom: 0.35rem;
-        }
-
-        .item-detail-row span:first-child {
-            color: #3b3634;
-            opacity: 0.95;
-        }
-
-        .item-detail-row span:last-child {
-            color: #f7e8c2;
-        }
-
-        .item-link a {
-            color: #248ea7;
-            text-decoration: underline;
-            word-break: break-word;
-        }
-
-        .scroll-card {
-            background: var(--sidebar);
-            color: #fff3d5;
-            height: 100%;
-            min-height: 58vh;
-            max-height: 80vh;
-            overflow-y: auto;
-            border-radius: 1rem;
-            box-sizing: border-box;
-        }
-
-        .score-item {
-            list-style: none;
-            padding: 0.38rem 0;
-            border-bottom: 1px solid rgba(255,255,255,0.12);
-            font-size: 1.05rem;
-            display: flex;
-            justify-content: space-between;
-            gap: 0.75rem;
-        }
-
-        .score-item:last-child {
-            border-bottom: none;
-        }
-
-        .sidebar-brand {
-            color: #fff4d2;
-            font-size: 3.2rem;
-            font-weight: 900;
-            text-align: center;
-            letter-spacing: 0.02em;
-            margin: 0.65rem 0 1rem;
-        }
-
-        .sidebar-block {
-            color: #fff4d2;
-            font-size: 2rem;
-            font-weight: 900;
-            margin: 0.85rem 0 0.3rem;
-        } 
-        section[data-testid="stSidebar"] div.stButton {
-            margin: 0.1rem 0 !important;
-        }
-
-        section[data-testid="stSidebar"] div.stButton > button,
-        section[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"] {
-            display: flex !important;
-            justify-content: flex-start !important;
-            align-items: center !important;
-            width: 100% !important;
-            min-height: 3.2rem !important;
-            padding: 0.4rem 1rem !important;
-            border-radius: 0.95rem !important;
-            border: 1px solid rgba(255, 241, 202, 0.22) !important;
-            background: rgba(255, 255, 255, 0.08) !important;
-            color: #fff4d2 !important;
-            font-size: 2.05rem !important;
-            font-weight: 900 !important;
-            letter-spacing: 0.01em !important;
-            line-height: 1.05 !important;
-            box-shadow: none !important;
-            transition: background-color 140ms ease, border-color 140ms ease !important;
-        }
-
-
-        section[data-testid="stSidebar"] div.stButton > button:hover,
-        section[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover {
-            background: rgba(255, 255, 255, 0.16) !important;
-            border-color: rgba(255, 241, 202, 0.45) !important;
-        }
-
-        section[data-testid="stSidebar"] div.stButton > button:focus,
-        section[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:focus {
-            outline: 2px solid rgba(255, 241, 202, 0.65) !important;
-            outline-offset: 2px !important;
-        }
-
-        .sidebar-list {
-            margin: 0;
-            padding-left: 1.3rem;
-            color: #fff4d2;
-            font-size: 1.6rem;
-            line-height: 1.3;
-        }
-
-        .sidebar-divider {
-            height: 3px;
-            background: rgba(255,255,255,0.85);
-            margin: 1rem 0;
-        }
-/* added image instead of emoji logo*/
-        .gift-box {
-            margin-top: 1rem;
-            border-radius: 1.4rem;
-            border: 0.2rem solid rgba(255, 241, 202, 0.35);
-            min-height: 10rem;
-            background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
-        }
-        section[data-testid="stSidebar"] div[data-testid="stImage"] {
-            margin-top: 1rem;
-        }
-
-        section[data-testid="stSidebar"] div[data-testid="stImage"] img {
-            display: block;
-            width: 66.5% !important;
-            max-width: 66.5% !important;
-            margin: 0 auto;
-            border-radius: 1.4rem;
-            border: 0.2rem solid rgba(255, 241, 202, 0.35);
-            background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
-            box-sizing: border-box;
-            transform-origin: center;
-            transform: scale(1.0);
-        }
-
-        .stButton > button,
-        .stDownloadButton > button {
-            border-radius: 999px;
-            border: none;
-            background: #f4bf68;
-            color: #3b3634;
-            font-weight: 800;
-        }
-
-        .stTextInput input,
-        .stNumberInput input,
-        .stSelectbox div[data-baseweb="select"] > div,
-        .stTextArea textarea {
-            background: rgba(255, 255, 255, 0.06) !important;
-            color: var(--text) !important;
-            border-color: rgba(255,255,255,0.14) !important;
-        }
-
-        .stDataFrame,
-        .stTable {
-            border-radius: 1rem;
-            overflow: hidden;
-        }
-
-        .wide-gap {
-            gap: 1rem;
-        }
-
-        .dashboard-grid {
-            gap: 1rem;
-        }
-
-        .small-note {
-            color: var(--muted);
-            font-size: 0.95rem;
-        }
-
-
-        div[data-testid="column"]:has(.scroll-card) {
-            display: flex;
-            flex-direction: column;
-        }
-
-        div[data-testid="column"]:has(.scroll-card) > div[data-testid="stVerticalBlock"] {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        div[data-testid="column"]:has(.scroll-card) .scroll-card {
-            flex: 1;
-        }
-        /* Streamlit renders each st.markdown/widget call as its own sibling
-           block, so a <div> opened in one call and closed in another never
-           actually wraps the widgets placed in between - it just floats
-           there empty while the real content renders alongside it.
-           To get a real card around live widgets (inputs, dataframes), this is why i 
-           put a hidden marker inside a st.container() and use :has() to
-           style that container's own wrapper instead. this is so stupid. */
-        .card-marker {
-            display: none;
-        }
-
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-card-marker) {
-            background: #4f8d93;
-            border: 7px solid rgba(132, 185, 106, 0.95);
-            border-radius: 1.6rem;
-            padding: 1rem 1.1rem;
-            color: #fff4d6;
-        }
-
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-card-compact-marker) {
-            background: #4f8d93;
-            border: 7px solid rgba(132, 185, 106, 0.95);
-            border-radius: 1.6rem;
-            padding: 1rem 1.1rem 0.4rem;
-            color: #fff4d6;
-        }
-
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.table-card-marker) {
-            background: var(--card-teal);
-            border: none;
-            border-radius: 1.6rem;
-            padding: 1rem 1.1rem;
-            box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset;
-        }
-
-
-        div[data-testid="stPlotlyChart"] {
-            border-radius: 2.8rem !important;
-            overflow: hidden !important;
-        }
-        div[data-testid="stPlotlyChart"] > div,
-        div[data-testid="stPlotlyChart"] .js-plotly-plot,
-        div[data-testid="stPlotlyChart"] .plot-container,
-        div[data-testid="stPlotlyChart"] iframe {
-            border-radius: 2.8rem !important;
-            overflow: hidden !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-        # who needs seperate style sheets when you can have 3 giant files with 2000+ lines each, here i choose to take a giant dump of css
-    )
 
 
 def get_db_path() -> Path:
@@ -829,9 +417,7 @@ def get_item_names(db_path_str: str) -> pd.DataFrame:
 
 
 def render_sidebar() -> str:
-    st.sidebar.markdown(
-        f'<div class="sidebar-brand">{APP_TITLE}</div>', unsafe_allow_html=True
-    )
+    st.sidebar.markdown(sidebar_brand(APP_TITLE), unsafe_allow_html=True)
     # Render navigation as large, styled buttons so they are clickable
     if "nav_page" not in st.session_state:
         st.session_state["nav_page"] = NAV_PAGES[0]
@@ -843,7 +429,7 @@ def render_sidebar() -> str:
     # remove the dotted list and keept a divider and gift box only
     # I had a great idea to also use javascript here, i pushed that idea so deep in my arse that i forgot about it, this is the best case senario for my mental health
     st.sidebar.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
-    st.sidebar.image(str(get_asset_path("logo.png")), use_container_width=True)
+    st.sidebar.image(str(get_asset_path("assets/logo.png")), use_container_width=True)
     st.sidebar.markdown('<div style="height: 0.5rem"></div>', unsafe_allow_html=True)
     page = st.session_state.get("nav_page", NAV_PAGES[0])
     st.sidebar.markdown('<div style="height: 0.75rem"></div>', unsafe_allow_html=True)
@@ -885,41 +471,15 @@ def render_home_page() -> None:
     )
 
     st.markdown(
-        """
-        <div style="text-align:left; margin: 0.5rem 0 1.1rem;">
-            <span class="note-banner">IMPORTANT</span>
-            <span class="note-line">| BEFORE USE</span>
-        </div>
-        """,
+        note_banner(),
         unsafe_allow_html=True,
     )
 
     left, right = st.columns([1.15, 1.0], gap="large")
     with left:
-        st.markdown(
-            """
-            <div class="home-card" style="background: rgba(255,255,255,0.03); border-radius: 1.8rem; padding: 1.2rem 1.35rem; text-align:center;">
-                <div style="font-size: 1.85rem; font-weight: 800; color: var(--text); line-height: 1.5;">
-                    Make sure to read the README.md and the LICENSE<br>
-                    Make sure to change the path for the db file in the app if you are using your own<br>
-                    If you have not generated the database file yet, the app will explain what is missing
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown(home_about_card(), unsafe_allow_html=True)
     with right:
-        st.markdown(
-            """
-            <div class="home-card" style="background: rgba(255,255,255,0.03); border-radius: 1.8rem; padding: 1.2rem 1.35rem; text-align:center; min-height: 18rem;">
-                <div style="font-size: 1.6rem; font-weight: 700; color: var(--accent); line-height: 1.6;">
-                    Giftyfy uses the schema tables users_login, user_profiles, items, and sales to power the
-                    dashboard, item search, and table inspection views.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown(home_usage_card(), unsafe_allow_html=True)
 
 
 def render_dashboard_page(db_path: Path) -> None:
@@ -984,10 +544,7 @@ def render_dashboard_page(db_path: Path) -> None:
                 '<span class="card-marker table-card-marker"></span>',
                 unsafe_allow_html=True,
             )
-            st.markdown(
-                '<div style="font-size:1.1rem; font-weight:800; margin-bottom:0.45rem;">users table here</div>',
-                unsafe_allow_html=True,
-            )
+            st.markdown(users_table_header(), unsafe_allow_html=True)
             st.dataframe(
                 users_df, use_container_width=True, height=180, hide_index=True
             )
@@ -1000,7 +557,7 @@ def render_dashboard_page(db_path: Path) -> None:
             {
                 "category": list(GROUPED_SCORE_FIELDS.keys()),
                 "score": [
-                    float(item_avg_scores[fields].mean()) if fields else 0.0
+                    float(item_avg_scores[list(fields)].mean()) if fields else 0.0
                     for fields in GROUPED_SCORE_FIELDS.values()
                 ],
             }
@@ -1011,7 +568,7 @@ def render_dashboard_page(db_path: Path) -> None:
             {
                 "category": list(GROUPED_SCORE_FIELDS.keys()),
                 "score": [
-                    float(sold_avg_scores[fields].mean()) if fields else 0.0
+                    float(sold_avg_scores[list(fields)].mean()) if fields else 0.0
                     for fields in GROUPED_SCORE_FIELDS.values()
                 ],
             }
@@ -1052,7 +609,7 @@ def render_dashboard_page(db_path: Path) -> None:
         chart1.update_traces(
             textposition="inside",
             textinfo="percent",
-            marker=dict(line=dict(color="#b5628e", width=1)),
+            marker=dict(line=dict(color="#3b3634", width=1)),
         )
 
         chart2 = px.pie(
@@ -1076,7 +633,7 @@ def render_dashboard_page(db_path: Path) -> None:
         chart2.update_traces(
             textposition="inside",
             textinfo="percent",
-            marker=dict(line=dict(color="#b5628e", width=1)),
+            marker=dict(line=dict(color="#3b3634", width=1)),
         )
 
         st.plotly_chart(
