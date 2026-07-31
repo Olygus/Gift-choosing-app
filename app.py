@@ -21,10 +21,7 @@ APP_SUBTITLE = "Gift choosing assistant"
 DEFAULT_DB_PATH = Path(__file__).with_name("giftyfy.db")
 
 
-def get_asset_path(filename: str) -> Path:
-    # Asset lookup helper - supports running from source and from
-    # a PyInstaller one-file bundle (uses _MEIPASS when present).
-    bundle_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+def get_asset_path(filename: str) -> Path:    bundle_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
     return bundle_root / filename
 
 
