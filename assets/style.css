@@ -1,0 +1,383 @@
+/* Variables and global styles for Giftyfy app */
+:root {
+    --bg: #3b3634;
+    --bg-elevated: #4a4340;
+    --sidebar: #d16413;
+    --card-green: #4a7a64;
+    --card-teal: #4d8d97;
+    --card-orange: #f2bc67;
+    --card-pink: #b5628e;
+    --panel: #f4bf68;
+    --text: #f7e8c2;
+    --muted: #e6d2a7;
+    --accent: #ffb561;
+    --grid: #ff9ea4;
+}
+
+html, body, [class*="css"]  {
+    font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+.stApp {
+    background: var(--bg);
+    color: var(--text);
+}
+
+section[data-testid="stSidebar"] {
+    background: var(--sidebar);
+}
+
+section[data-testid="stSidebar"] > div {
+    background: var(--sidebar);
+}
+
+footer {
+    display: none;
+}
+
+.block-container {
+    padding-top: 1.2rem;
+    padding-bottom: 1.2rem;
+}
+
+.page-shell {
+    background: var(--bg);
+    color: var(--text);
+}
+
+.hero-title {
+    text-align: center;
+    color: var(--accent);
+    font-size: clamp(2.8rem, 5vw, 4.6rem);
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    margin: 0.25rem 0 0.4rem;
+}
+
+.section-title {
+    color: var(--accent);
+    font-size: clamp(2rem, 4vw, 3.4rem);
+    font-weight: 800;
+    margin: 0.15rem 0 0.4rem;
+    letter-spacing: 0.02em;
+}
+
+.subtitle {
+    color: var(--text);
+    font-size: 1.35rem;
+    line-height: 1.6;
+}
+
+.note-banner {
+    display: inline-block;
+    background: #f0281e;
+    color: #fff4d7;
+    padding: 0.35rem 1rem;
+    border-radius: 0.3rem;
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    margin-right: 0.65rem;
+}
+
+.note-line {
+    color: var(--accent);
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.metric-card,
+.chart-card,
+.item-detail-card,
+.scroll-card,
+.home-card {
+    border-radius: 1.6rem;
+    padding: 1rem 1.1rem;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset;
+}
+
+.metric-card {
+    background: var(--card-green);
+    color: var(--text);
+    text-align: center;
+    min-height: 7.1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.2rem;
+}
+
+.metric-card.teal {
+    background: var(--card-teal);
+}
+
+.metric-card.orange {
+    background: var(--card-orange);
+    color: #fff6d7;
+}
+
+.metric-card.pink {
+    background: var(--card-pink);
+}
+
+.metric-label {
+    font-size: clamp(1.05rem, 2vw, 1.55rem);
+    line-height: 1.1;
+}
+
+.metric-value {
+    font-size: clamp(1.45rem, 2.7vw, 2.2rem);
+    line-height: 1.05;
+    font-weight: 700;
+}
+
+.chart-card {
+    background: var(--card-pink);
+    min-height: 25rem;
+}
+
+.item-detail-card {
+    background: var(--card-orange);
+    color: #000000;
+    border-radius: 2rem;
+}
+
+.item-detail-row {
+    display: grid;
+    grid-template-columns: 0.95fr 1.1fr;
+    gap: 0.55rem;
+    font-size: 1.05rem;
+    margin-bottom: 0.35rem;
+}
+
+.item-detail-row span:first-child {
+    color: #3b3634;
+    opacity: 0.95;
+}
+
+.item-detail-row span:last-child {
+    color: #f7e8c2;
+}
+
+.item-link a {
+    color: #248ea7;
+    text-decoration: underline;
+    word-break: break-word;
+}
+
+.scroll-card {
+    background: var(--sidebar);
+    color: #fff3d5;
+    height: 100%;
+    min-height: 58vh;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: 1rem;
+    box-sizing: border-box;
+}
+
+.score-item {
+    list-style: none;
+    padding: 0.38rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+    font-size: 1.05rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.score-item:last-child {
+    border-bottom: none;
+}
+
+.sidebar-brand {
+    color: #fff4d2;
+    font-size: 3.2rem;
+    font-weight: 900;
+    text-align: center;
+    letter-spacing: 0.02em;
+    margin: 0.65rem 0 1rem;
+}
+
+.sidebar-block {
+    color: #fff4d2;
+    font-size: 2rem;
+    font-weight: 900;
+    margin: 0.85rem 0 0.3rem;
+}
+
+section[data-testid="stSidebar"] div.stButton {
+    margin: 0.1rem 0 !important;
+}
+
+section[data-testid="stSidebar"] div.stButton > button,
+section[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"] {
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-height: 3.2rem !important;
+    padding: 0.4rem 1rem !important;
+    border-radius: 0.95rem !important;
+    border: 1px solid rgba(255, 241, 202, 0.22) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #fff4d2 !important;
+    font-size: 2.05rem !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.01em !important;
+    line-height: 1.05 !important;
+    box-shadow: none !important;
+    transition: background-color 140ms ease, border-color 140ms ease !important;
+}
+
+section[data-testid="stSidebar"] div.stButton > button:hover,
+section[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover {
+    background: rgba(255, 255, 255, 0.16) !important;
+    border-color: rgba(255, 241, 202, 0.45) !important;
+}
+
+section[data-testid="stSidebar"] div.stButton > button:focus,
+section[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:focus {
+    outline: 2px solid rgba(255, 241, 202, 0.65) !important;
+    outline-offset: 2px !important;
+}
+
+.sidebar-list {
+    margin: 0;
+    padding-left: 1.3rem;
+    color: #fff4d2;
+    font-size: 1.6rem;
+    line-height: 1.3;
+}
+
+.sidebar-divider {
+    height: 3px;
+    background: rgba(255,255,255,0.85);
+    margin: 1rem 0;
+}
+
+/* added image instead of emoji logo*/
+.gift-box {
+    margin-top: 1rem;
+    border-radius: 1.4rem;
+    border: 0.2rem solid rgba(255, 241, 202, 0.35);
+    min-height: 10rem;
+    background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
+}
+section[data-testid="stSidebar"] div[data-testid="stImage"] {
+    margin-top: 1rem;
+}
+
+section[data-testid="stSidebar"] div[data-testid="stImage"] img {
+    display: block;
+    width: 66.5% !important;
+    max-width: 66.5% !important;
+    margin: 0 auto;
+    border-radius: 1.4rem;
+    border: 0.2rem solid rgba(255, 241, 202, 0.35);
+    background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
+    box-sizing: border-box;
+    transform-origin: center;
+    transform: scale(1.0);
+}
+
+.stButton > button,
+.stDownloadButton > button {
+    border-radius: 999px;
+    border: none;
+    background: #f4bf68;
+    color: #3b3634;
+    font-weight: 800;
+}
+
+.stTextInput input,
+.stNumberInput input,
+.stSelectbox div[data-baseweb="select"] > div,
+.stTextArea textarea {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: var(--text) !important;
+    border-color: rgba(255,255,255,0.14) !important;
+}
+
+.stDataFrame,
+.stTable {
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.wide-gap {
+    gap: 1rem;
+}
+
+.dashboard-grid {
+    gap: 1rem;
+}
+
+.small-note {
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
+div[data-testid="column"]:has(.scroll-card) {
+    display: flex;
+    flex-direction: column;
+}
+
+div[data-testid="column"]:has(.scroll-card) > div[data-testid="stVerticalBlock"] {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+div[data-testid="column"]:has(.scroll-card) .scroll-card {
+    flex: 1;
+}
+
+/* Streamlit renders each st.markdown/widget call as its own sibling
+   block, so a <div> opened in one call and closed in another never
+   actually wraps the widgets placed in between - it just floats
+   there empty while the real content renders alongside it.
+   To get a real card around live widgets (inputs, dataframes), this is why i 
+   put a hidden marker inside a st.container() and use :has() to
+   style that container's own wrapper instead. this is so stupid. */
+.card-marker {
+    display: none;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-card-marker) {
+    background: #4f8d93;
+    border: 7px solid rgba(132, 185, 106, 0.95);
+    border-radius: 1.6rem;
+    padding: 1rem 1.1rem;
+    color: #fff4d6;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-card-compact-marker) {
+    background: #4f8d93;
+    border: 7px solid rgba(132, 185, 106, 0.95);
+    border-radius: 1.6rem;
+    padding: 1rem 1.1rem 0.4rem;
+    color: #fff4d6;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.table-card-marker) {
+    background: var(--card-teal);
+    border: none;
+    border-radius: 1.6rem;
+    padding: 1rem 1.1rem;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset;
+}
+
+
+div[data-testid="stPlotlyChart"] {
+    border-radius: 2.8rem !important;
+    overflow: hidden !important;
+}
+
+div[data-testid="stPlotlyChart"] > div,
+div[data-testid="stPlotlyChart"] .js-plotly-plot,
+div[data-testid="stPlotlyChart"] .plot-container,
+div[data-testid="stPlotlyChart"] iframe {
+    border-radius: 2.8rem !important;
+    overflow: hidden !important;
+}

@@ -157,7 +157,6 @@ python -m streamlit run app.py
 # alternatively you can run the app via pyinstaller (recommended but untested for windows)
 pip install pyinstaller
 # then in the same directory run
-pyinstaller --noconsole --onefile --name dashboard --add-data "app.py:." --add-data "giftyfy.db:." --add-data "logo.png:." dashboard.py
 # then launch it from the dist folder with 
 ./dist/dashboard
 ```
