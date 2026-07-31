@@ -3,8 +3,6 @@ from __future__ import annotations
 
 # TODO
 # fix the gap on the dashboard page
-# increase font size for subtitles
-# align warning and important labeles to the left
 # remove big ugly bar introduced with streamlit pyhton libery. i tried st.set_page_config stuff, didnt work, look into this again when I lose the urge to k*ll myself (this is a joke)
 
 # import os
@@ -24,6 +22,8 @@ DEFAULT_DB_PATH = Path(__file__).with_name("giftyfy.db")
 
 
 def get_asset_path(filename: str) -> Path:
+    # Asset lookup helper - supports running from source and from
+    # a PyInstaller one-file bundle (uses _MEIPASS when present).
     bundle_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
     return bundle_root / filename
 
@@ -35,6 +35,7 @@ def ensure_streamlit_dark_theme() -> None:
     executable will default to the dark theme for users who don't
     already have a Streamlit config.
     """
+    # best-effort helper: do not error if writing fails
     try:
         cfg_dir = Path.home() / ".streamlit"
         cfg_dir.mkdir(exist_ok=True)
@@ -257,8 +258,9 @@ def apply_global_style() -> None:
 
         .subtitle {
             color: var(--text);
-            font-size: 1.1rem;
-            line-height: 1.5;
+            /* increased for readability */
+            font-size: 1.35rem;
+            line-height: 1.6;
         }
 
         .note-banner {
@@ -887,7 +889,7 @@ def render_home_page() -> None:
 
     st.markdown(
         """
-        <div style="text-align:center; margin: 0.5rem 0 1.1rem;">
+        <div style="text-align:left; margin: 0.5rem 0 1.1rem;">
             <span class="note-banner">IMPORTANT</span>
             <span class="note-line">| BEFORE USE</span>
         </div>
@@ -970,13 +972,16 @@ def render_dashboard_page(db_path: Path) -> None:
             "average comision", f"${avg_commission_amount:,.1f}", tone="teal"
         )
         st.markdown('<div style="height: 0.4rem"></div>', unsafe_allow_html=True)
-        render_small_metric("number of sales", f"{total_sales}", tone="teal")
 
     st.markdown('<div style="height: 0.25rem"></div>', unsafe_allow_html=True)
     wide_col, _ = st.columns([1.1 + 1.55, 1.08], gap="large")
 
     with wide_col:
         st.markdown('<div style="height: 0.4rem"></div>', unsafe_allow_html=True)
+        # placed here so the KPI spans the same width as the users table below
+        # (moved from the top-row to avoid a large vertical gap)
+        render_small_metric("number of sales", f"{total_sales}", tone="teal")
+        st.markdown('<div style="height: 0.35rem"></div>', unsafe_allow_html=True)
         with st.container(border=True):
             st.markdown(
                 '<span class="card-marker table-card-marker"></span>',
