@@ -486,8 +486,8 @@ def main() -> None:
     try:
         conn.execute("PRAGMA foreign_keys = ON")
         
-        # Initialize database schema from sql file
-        with open("sql", "r") as f:
+        # Initialize database schema from schema.sql
+        with open("schema.sql", "r") as f:
             schema = f.read()
             conn.executescript(schema)
         
