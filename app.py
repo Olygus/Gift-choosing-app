@@ -2,21 +2,18 @@
 from __future__ import annotations
 
 # TODO
-# add instruction for app in README.md
 # fix the gap on the dashboard page
 # increase font size for subtitles
-# add logo image instead of emoji in the navigation
 # align warning and important labeles to the left
-# maybe change last-child font color to black, maybe it looks fine, will leave for now
-# add color to tables with background = #color if needed
 # remove big ugly bar introduced with streamlit pyhton libery. i tried st.set_page_config stuff, didnt work, look into this again when I lose the urge to k*ll myself (this is a joke)
 
 # import os
 import sqlite3
+import sys
 from contextlib import closing
 from pathlib import Path
+import os
 # from typing import Iterable, Sequence
-
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -24,6 +21,37 @@ import streamlit as st
 APP_TITLE = "Giftyfy"
 APP_SUBTITLE = "Gift choosing assistant"
 DEFAULT_DB_PATH = Path(__file__).with_name("giftyfy.db")
+
+
+def get_asset_path(filename: str) -> Path:
+    bundle_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    return bundle_root / filename
+
+
+def ensure_streamlit_dark_theme() -> None:
+    """Create a user streamlit config enabling dark theme if not present.
+
+    This writes to ~/.streamlit/config.toml so the packaged one-file
+    executable will default to the dark theme for users who don't
+    already have a Streamlit config.
+    """
+    try:
+        cfg_dir = Path.home() / ".streamlit"
+        cfg_dir.mkdir(exist_ok=True)
+        cfg_file = cfg_dir / "config.toml"
+        if not cfg_file.exists():
+            cfg_text = """
+[theme]
+base = "dark"
+primaryColor = "#ffb561"
+backgroundColor = "#3b3634"
+secondaryBackgroundColor = "#4a4340"
+textColor = "#f7e8c2"
+"""
+            cfg_file.write_text(cfg_text)
+    except Exception:
+        # best-effort only; don't prevent the app from starting
+        pass
 
 TABLE_NAMES = ("users_login", "user_profiles", "items", "sales")
 
@@ -420,27 +448,29 @@ def apply_global_style() -> None:
             background: rgba(255,255,255,0.85);
             margin: 1rem 0;
         }
-
+/* added image instead of emoji logo*/
         .gift-box {
             margin-top: 1rem;
             border-radius: 1.4rem;
             border: 0.2rem solid rgba(255, 241, 202, 0.35);
             min-height: 10rem;
-            position: relative;
             background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
         }
-        /* 
-        TODO: the gift is meant to be a logo for a phote, it is in canva rn and when it is done cooking i will use it instead.
-        */
-        .gift-box::before {
-            content: "🎁";
-            position: absolute;
-            inset: 0;
-            display: grid;
-            place-items: center;
-            font-size: 6rem;
-            filter: saturate(1.1);
-            opacity: 0.85;
+        section[data-testid="stSidebar"] div[data-testid="stImage"] {
+            margin-top: 1rem;
+        }
+
+        section[data-testid="stSidebar"] div[data-testid="stImage"] img {
+            display: block;
+            width: 66.5% !important;
+            max-width: 66.5% !important;
+            margin: 0 auto;
+            border-radius: 1.4rem;
+            border: 0.2rem solid rgba(255, 241, 202, 0.35);
+            background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
+            box-sizing: border-box;
+            transform-origin: center;
+            transform: scale(1.0);
         }
 
         .stButton > button,
@@ -814,7 +844,7 @@ def render_sidebar() -> str:
     # remove the dotted list and keept a divider and gift box only
     # I had a great idea to also use javascript here, i pushed that idea so deep in my arse that i forgot about it, this is the best case senario for my mental health
     st.sidebar.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
-    st.sidebar.markdown('<div class="gift-box"></div>', unsafe_allow_html=True)
+    st.sidebar.image(str(get_asset_path("logo.png")), use_container_width=True)
     st.sidebar.markdown('<div style="height: 0.5rem"></div>', unsafe_allow_html=True)
     page = st.session_state.get("nav_page", NAV_PAGES[0])
     st.sidebar.markdown('<div style="height: 0.75rem"></div>', unsafe_allow_html=True)
@@ -939,13 +969,14 @@ def render_dashboard_page(db_path: Path) -> None:
         render_small_metric(
             "average comision", f"${avg_commission_amount:,.1f}", tone="teal"
         )
+        st.markdown('<div style="height: 0.4rem"></div>', unsafe_allow_html=True)
+        render_small_metric("number of sales", f"{total_sales}", tone="teal")
 
-    st.markdown('<div style="height: 1rem"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="height: 0.25rem"></div>', unsafe_allow_html=True)
     wide_col, _ = st.columns([1.1 + 1.55, 1.08], gap="large")
 
     with wide_col:
-        render_small_metric("number of sales", f"{total_sales}", tone="teal")
-        st.markdown('<div style="height: 0.8rem"></div>', unsafe_allow_html=True)
+        st.markdown('<div style="height: 0.4rem"></div>', unsafe_allow_html=True)
         with st.container(border=True):
             st.markdown(
                 '<span class="card-marker table-card-marker"></span>',
@@ -956,7 +987,7 @@ def render_dashboard_page(db_path: Path) -> None:
                 unsafe_allow_html=True,
             )
             st.dataframe(
-                users_df, use_container_width=True, height=250, hide_index=True
+                users_df, use_container_width=True, height=180, hide_index=True
             )
 
     with chart_col:
@@ -1011,7 +1042,7 @@ def render_dashboard_page(db_path: Path) -> None:
             plot_bgcolor="rgba(0,0,0,0)",
             font=dict(color="#f7e8c2", size=12),
             margin=dict(l=0, r=0, t=40, b=0),
-            height=340,
+            height=240,
             showlegend=True,
             legend=_legend_cfg,
             title_x=0.04,
@@ -1035,7 +1066,7 @@ def render_dashboard_page(db_path: Path) -> None:
             plot_bgcolor="rgba(0,0,0,0)",
             font=dict(color="#f7e8c2", size=12),
             margin=dict(l=0, r=0, t=40, b=0),
-            height=340,
+            height=240,
             showlegend=True,
             legend=_legend_cfg,
             title_x=0.04,
@@ -1278,6 +1309,7 @@ def render_not_found_state(db_path: Path) -> None:
 
 
 def main() -> None:
+    ensure_streamlit_dark_theme()
     st.set_page_config(
         page_title=APP_TITLE,
         page_icon="🎁",
