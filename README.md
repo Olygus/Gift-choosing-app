@@ -66,6 +66,47 @@ Ensure you have a C++17 compliant compiler and the SQLite3 development libraries
    giftyfy.exe
    ```
 
+## Change Default Admin Credentials and DB Path
+
+If you want to change the default admin login, update these values in `calculator.cpp`:
+
+```cpp
+const std::string adminUser = "admin";
+const std::string adminPass = "admin123";
+```
+
+Replace `"admin"` and `"admin123"` with your preferred username and password, then recompile the app.
+
+The app also contains an SQL fallback/update line for the default admin account in `calculator.cpp` incase it is missing:
+
+```cpp
+"UPDATE users_login SET password_ = 'admin123', email_ = 'FarhanIsBest@gmail.com', is_admin = 1 WHERE username_ = 'admin';",
+```
+
+Update this SQL string to match your new admin username/password/email, for example:
+
+```cpp
+"UPDATE users_login SET password_ = 'yourNewPassword', email_ = 'you@example.com', is_admin = 1 WHERE username_ = 'yourAdminUsername';",
+```
+or keep it as is for a fallback.
+
+If you are using your own database, the SQL update above ensures the admin row is corrected on startup.
+
+For the Streamlit dashboard, the default DB file location is defined in `app.py`, change it if you want to use an alternate database:
+
+```python
+DEFAULT_DB_PATH = Path(__file__).with_name("giftyfy.db")
+```
+
+And used in the DB path input field:
+
+```python
+value=str(get_db_path()),
+help="Defaults to giftyfy.db beside app.py",
+```
+
+To use a different default location, set `DEFAULT_DB_PATH` to another path (for example, `Path("/absolute/path/to/giftyfy.db")`), then restart Streamlit.
+
 ## Optional: Load Sample Data
 
 If you want a populated with a sanple database to test with, run the sample seeding script before launching the app. This works on Debian/Ubuntu, Arch Linux, and Windows as long as Python 3 is installed:
