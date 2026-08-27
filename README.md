@@ -133,7 +133,8 @@ Use the platform instructions below for the setup path you need.
 
    ```powershell
    python -m venv .venv
-   .\.venv\Scripts\Activate.ps1
+   .\.venv\Scripts\Activate.ps1 # if using powershell
+   source .venv/bin/activate # if using bash in MinGW-w64 or MSYS2 on windows
    ```
 
 3. Install dashboard dependencies.
@@ -324,7 +325,7 @@ python -m streamlit run app.py
 Notes:
 
 - If you created the virtual environment in a different location, replace the `.venv` path above with your environment's Python executable.
-- If you use WSL, run the Linux commands from the WSL shell.
+- If you use WSL, run the Linux commands from the respective WSL shell.
 - If Streamlit cannot find the database, verify that `DEFAULT_DB_PATH` points to the expected `giftyfy.db` file.
 
 ### Package the dashboard with PyInstaller
