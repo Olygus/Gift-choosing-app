@@ -134,7 +134,8 @@ Use the platform instructions below for the setup path you need.
    ```powershell
    python -m venv .venv
    .\.venv\Scripts\Activate.ps1 # if using powershell
-   source .venv/bin/activate # if using bash in MinGW-w64 or MSYS2 on windows
+   .\.venv\Scripts\activate.bat #if using cmd 
+   source .venv/Scripts/activate # if using bash in MinGW-w64 or MSYS2 on windows
    ```
 
 3. Install dashboard dependencies.
