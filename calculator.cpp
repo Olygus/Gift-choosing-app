@@ -76,7 +76,7 @@ std::string esc_reset() {
 // i really should not do this again
 void setTerminalBackground(int r, int g, int b) {
     std::string bg = esc_bg(r, g, b);
-    // sset background color and clear screen
+    // set background color and clear screen
     std::cout << bg << "\033[2J\033[H" << std::flush;
 }
 
