@@ -195,7 +195,7 @@ Release builds are published when a tag such as `v1.2.0` is pushed. Download the
 gh release download v1.2.0
 ```
 
-Linux releases include `giftyfy-linux.tar.gz`, `giftyfy-cli-linux`, and `giftyfy-dashboard-linux`. Windows releases include `giftyfy-cli-windows.exe` and `giftyfy-dashboard-windows.exe`. macOS users should follow the manual setup instructions because the workflow does not publish a macOS binary.
+Linux releases include `giftyfy-linux.tar.gz`, which contains the `giftyfy` CLI and `dashboard` executable. Windows releases include `giftyfy.exe` and `dashboard.exe`. macOS users should follow the manual setup instructions because the workflow does not publish a macOS binary.
 
 ## Usage
 
@@ -210,23 +210,22 @@ tar -xzf giftyfy-linux.tar.gz
 ./giftyfy
 ```
 
-Run the packaged CLI launcher separately:
+Extracted Linux release files:
 
 ```bash
-chmod +x giftyfy-cli-linux
-./giftyfy-cli-linux
+chmod +x giftyfy dashboard
+./giftyfy
 ```
 
-Run the packaged dashboard separately:
+Run the dashboard separately:
 
 ```bash
-chmod +x giftyfy-dashboard-linux
-./giftyfy-dashboard-linux
+./dashboard
 ```
 
 ### Downloaded Windows release
 
-Run `giftyfy-cli-windows.exe` for the native CLI, or run `giftyfy-dashboard-windows.exe` separately for the desktop dashboard.
+Run `giftyfy.exe` for the native CLI, or run `dashboard.exe` separately for the desktop dashboard.
 
 ### Manual source setup
 
@@ -412,9 +411,9 @@ The screenshots below use the captured images in the `img/` folder.
 ```text
 Gift-choosing-app/
 ├── README.md              # you are reading it right now, it contains the setup and usage instructions
-├── .github/
+├── .github/               # dont worry about this folder
 │   └── workflows/
-│       └── release.yml     # builds and publishes tagged Linux and Windows releases
+│       └── release.yml    # builds and publishes tagged Linux and Windows releases
 ├── .gitattributes         # github files for code
 ├── .gitignore             # makes sure sensitive or local files don't make it to github
 ├── .venv/                 # local python virtual environment

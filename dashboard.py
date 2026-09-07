@@ -12,7 +12,7 @@ PORT = 8501
 
 
 def run_bundled_streamlit():
-    from streamlit.web import cli as streamlit_cli
+    from streamlit.web import bootstrap
 
     if len(sys.argv) < 3:
         raise SystemExit(
@@ -20,8 +20,15 @@ def run_bundled_streamlit():
         )
 
     script_path = sys.argv[2]
-    sys.argv = ["streamlit", "run", script_path, *sys.argv[3:]]
-    streamlit_cli.main()
+    bootstrap.run(
+        script_path,
+        "streamlit run",
+        sys.argv[3:],
+        {
+            "server.port": PORT,
+            "server.headless": True,
+        },
+    )
 
 
 def is_port_open(port):

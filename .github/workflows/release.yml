@@ -101,23 +101,24 @@ jobs:
             .venv/Scripts/python.exe db-generate-sample.py giftyfy.db
           fi
 
-      # Build a single-file CLI launcher and embed the compiled native binary.
+      # Build the Linux CLI launcher and embed the compiled native binary.
       - name: Package Linux CLI launcher
         if: matrix.platform == 'linux'
         run: |
-          .venv/bin/pyinstaller --onefile --name giftyfy-cli --add-binary "giftyfy:." cli_launcher.py
+          .venv/bin/pyinstaller --onefile --name giftyfy --add-binary "giftyfy:." cli_launcher.py
 
-      - name: Package Windows CLI launcher
+      # Build the Windows CLI executable with a console window.
+      - name: Package Windows CLI executable
         if: matrix.platform == 'windows'
         shell: powershell
         run: |
-          .venv\Scripts\pyinstaller.exe --onefile --name giftyfy-cli --add-binary "giftyfy.exe;." cli_launcher.py
+          .venv\Scripts\pyinstaller.exe --onefile --console --name giftyfy --add-binary "giftyfy.exe;." cli_launcher.py
 
       # Bundle the Streamlit source, database, and complete assets directory.
       - name: Package Linux dashboard executable
         if: matrix.platform == 'linux'
         run: |
-          .venv/bin/pyinstaller --onefile --noconsole --name giftyfy-dashboard \
+          .venv/bin/pyinstaller --onefile --noconsole --name dashboard \
             --collect-all streamlit \
             --add-data "app.py:." \
             --add-data "giftyfy.db:." \
@@ -128,7 +129,7 @@ jobs:
         if: matrix.platform == 'windows'
         shell: powershell
         run: |
-          .venv\Scripts\pyinstaller.exe --onefile --noconsole --name giftyfy-dashboard `
+          .venv\Scripts\pyinstaller.exe --onefile --noconsole --name dashboard `
             --collect-all streamlit `
             --add-data "app.py;." `
             --add-data "giftyfy.db;." `
@@ -147,11 +148,11 @@ jobs:
         if: matrix.platform == 'linux'
         run: |
           mkdir -p release-assets
-          cp dist/giftyfy-cli release-assets/giftyfy-cli-linux
-          cp dist/giftyfy-dashboard release-assets/giftyfy-dashboard-linux
+          mkdir -p linux-release
+          cp dist/giftyfy linux-release/giftyfy
+          cp dist/dashboard linux-release/dashboard
+          tar -czf giftyfy-linux.tar.gz -C linux-release giftyfy dashboard
           cp giftyfy-linux.tar.gz release-assets/
-          test -f release-assets/giftyfy-cli-linux
-          test -f release-assets/giftyfy-dashboard-linux
           test -f release-assets/giftyfy-linux.tar.gz
 
       # Collect all Windows outputs under stable release asset names.
@@ -160,10 +161,10 @@ jobs:
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force release-assets | Out-Null
-          Copy-Item dist\giftyfy-cli.exe release-assets\giftyfy-cli-windows.exe
-          Copy-Item dist\giftyfy-dashboard.exe release-assets\giftyfy-dashboard-windows.exe
-          if (-not (Test-Path release-assets\giftyfy-cli-windows.exe)) { throw 'CLI artifact missing' }
-          if (-not (Test-Path release-assets\giftyfy-dashboard-windows.exe)) { throw 'Dashboard artifact missing' }
+          Copy-Item dist\giftyfy.exe release-assets\giftyfy.exe
+          Copy-Item dist\dashboard.exe release-assets\dashboard.exe
+          if (-not (Test-Path release-assets\giftyfy.exe)) { throw 'CLI artifact missing' }
+          if (-not (Test-Path release-assets\dashboard.exe)) { throw 'Dashboard artifact missing' }
 
       # Upload platform-specific artifacts for the separate publish job.
       - name: Upload Linux artifacts
@@ -207,11 +208,9 @@ jobs:
       # Fail before release creation when any expected asset is missing.
       - name: Verify release artifacts
         run: |
-          test -f dist/giftyfy-cli-linux
-          test -f dist/giftyfy-dashboard-linux
           test -f dist/giftyfy-linux.tar.gz
-          test -f dist/giftyfy-cli-windows.exe
-          test -f dist/giftyfy-dashboard-windows.exe
+          test -f dist/giftyfy.exe
+          test -f dist/dashboard.exe
 
       # Create the release and ask GitHub to generate automated release notes.
       - name: Create GitHub Release
@@ -221,10 +220,8 @@ jobs:
           name: ${{ github.ref_name }}
           generate_release_notes: true
           files: |
-            dist/giftyfy-cli-linux
-            dist/giftyfy-dashboard-linux
             dist/giftyfy-linux.tar.gz
-            dist/giftyfy-cli-windows.exe
-            dist/giftyfy-dashboard-windows.exe
+            dist/giftyfy.exe
+            dist/dashboard.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
