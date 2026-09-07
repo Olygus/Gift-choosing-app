@@ -31,7 +31,7 @@ def run_bundled_streamlit(port):
         )
 
     script_path = sys.argv[2]
-    # Frozen execution has no Click context, so initialize Streamlit through bootstrap directly.
+    # the broken white screen happened when execution has no Click context, so initialize Streamlit through bootstrap directly.
     flag_options = {
         "global.developmentMode": False,
         "server.address": "127.0.0.1",
