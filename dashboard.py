@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 PORT = 8501
+IS_FROZEN = getattr(sys, "_MEIPASS", None) is not None
 
 
 def run_bundled_streamlit():
@@ -56,10 +57,10 @@ class StreamlitWindow(QMainWindow):
         self.setCentralWidget(container)
 
         # PyInstaller path resolution for app.py
-        if getattr(sys, "frozen", False):
+        if IS_FROZEN:
             script_path = os.path.join(sys._MEIPASS, "app.py")
         else:
-            script_path = os.path.abspath("app.py")
+            script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app.py")
 
         streamlit_command = [
             sys.executable,
@@ -67,7 +68,9 @@ class StreamlitWindow(QMainWindow):
             script_path,
             f"--server.port={PORT}",
             "--server.headless=true",
-        ] if getattr(sys, "frozen", False) else [
+        ] if IS_FROZEN else [
+            sys.executable,
+            "-m",
             "streamlit",
             "run",
             script_path,
