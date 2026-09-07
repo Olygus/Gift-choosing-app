@@ -14,6 +14,11 @@ PORT = 8501
 def run_bundled_streamlit():
     from streamlit.web import cli as streamlit_cli
 
+    if len(sys.argv) < 3:
+        raise SystemExit(
+            "Missing Streamlit script path (expected: --run-streamlit <script> [args...])"
+        )
+
     script_path = sys.argv[2]
     sys.argv = ["streamlit", "run", script_path, *sys.argv[3:]]
     streamlit_cli.main()
