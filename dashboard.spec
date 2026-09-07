@@ -1,15 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 from PyInstaller.utils.hooks import collect_all
+import os
+import streamlit
 
 
 streamlit_datas, streamlit_binaries, streamlit_hiddenimports = collect_all("streamlit")
+streamlit_static_path = os.path.join(os.path.dirname(streamlit.__file__), "static")
 
 a = Analysis(
     ['dashboard.py'],
     pathex=[],
     binaries=streamlit_binaries,
     datas=streamlit_datas + [
+        (streamlit_static_path, 'streamlit/static'),
         ('app.py', '.'),
         ('giftyfy.db', '.'),
         ('assets/logo.png', 'assets'),

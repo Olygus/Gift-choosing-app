@@ -4,6 +4,7 @@ import subprocess
 
 # import time, sorry bro, but i replaced you with QTimer
 import socket
+import urllib.request
 from PyQt6.QtCore import QUrl, QTimer
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -44,9 +45,14 @@ def run_bundled_streamlit(port):
     )
 
 
-def is_port_open(port):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(("127.0.0.1", port)) == 0
+def is_server_ready(port):
+    try:
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/_stcore/health", timeout=1
+        ) as response:
+            return response.status == 200
+    except (OSError, urllib.error.URLError):
+        return False
 
 
 class StreamlitWindow(QMainWindow):
@@ -103,7 +109,7 @@ class StreamlitWindow(QMainWindow):
         self.check_timer.start(100)
 
     def check_server_ready(self):
-        if is_port_open(self.port):
+        if is_server_ready(self.port):
             self.check_timer.stop()
             self.browser.setUrl(QUrl(f"http://127.0.0.1:{self.port}"))
 
