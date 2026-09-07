@@ -412,6 +412,9 @@ The screenshots below use the captured images in the `img/` folder.
 ```text
 Gift-choosing-app/
 ├── README.md              # you are reading it right now, it contains the setup and usage instructions
+├── .github/
+│   └── workflows/
+│       └── release.yml     # builds and publishes tagged Linux and Windows releases
 ├── .gitattributes         # github files for code
 ├── .gitignore             # makes sure sensitive or local files don't make it to github
 ├── .venv/                 # local python virtual environment
@@ -419,6 +422,7 @@ Gift-choosing-app/
 ├── calculator.cpp         # C++17 tui app with SQLite-backed admin and table flows, contains most of the source code for masking passwords, validating input and calculating distance.
 ├── app.py                 # the Streamlit dashboard and data access layer
 ├── dashboard.py           # PyQt6 launcher that embeds Streamlit in a desktop window
+├── cli_launcher.py        # launcher that starts the native CLI in a terminal
 ├── dashboard.spec         # PyInstaller spec for packaging the dashboard wrapper (not in repo, it is created by python)
 ├── giftyfy.spec           # PyInstaller spec for packaging the console app (not in repo, created by python)
 ├── db-generate-sample.py  #creates a sample for testing app
