@@ -4,12 +4,13 @@ import subprocess
 
 # import time, sorry bro, but i replaced you with QTimer
 import socket
-import urllib.request
 from PyQt6.QtCore import QUrl, QTimer
+from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 IS_FROZEN = getattr(sys, "_MEIPASS", None) is not None
+PORT = 8501
 
 
 def find_free_port():
@@ -30,29 +31,16 @@ def run_bundled_streamlit(port):
         )
 
     script_path = sys.argv[2]
-    config.set_option("server.address", "127.0.0.1")
-    config.set_option("server.port", port)
-    config.set_option("server.headless", True)
-    bootstrap.run(
-        script_path,
-        False,
-        sys.argv[3:],
-        {
-            "server.address": "127.0.0.1",
-            "server.port": port,
-            "server.headless": True,
-        },
-    )
-
-
-def is_server_ready(port):
-    try:
-        with urllib.request.urlopen(
-            f"http://127.0.0.1:{port}/_stcore/health", timeout=1
-        ) as response:
-            return response.status == 200
-    except (OSError, urllib.error.URLError):
-        return False
+    # Frozen execution has no Click context, so initialize Streamlit through bootstrap directly.
+    flag_options = {
+        "global.developmentMode": False,
+        "server.address": "127.0.0.1",
+        "server.port": port,
+        "server.headless": True,
+    }
+    config._main_script_path = os.path.abspath(script_path)
+    bootstrap.load_config_options(flag_options=flag_options)
+    bootstrap.run(script_path, False, [], flag_options)
 
 
 class StreamlitWindow(QMainWindow):
@@ -104,12 +92,40 @@ class StreamlitWindow(QMainWindow):
             stderr=subprocess.DEVNULL,
         )
 
+        self.network_manager = QNetworkAccessManager(self)
+        self.readiness_request_pending = False
         self.check_timer = QTimer()  # replacement for time.time(), who tf names these
         self.check_timer.timeout.connect(self.check_server_ready)
         self.check_timer.start(100)
 
     def check_server_ready(self):
-        if is_server_ready(self.port):
+        if self.readiness_request_pending:
+            return
+        self.readiness_request_pending = True
+        request = QNetworkRequest(
+            QUrl(f"http://127.0.0.1:{self.port}/_stcore/health")
+        )
+        reply = self.network_manager.get(request)
+        reply.finished.connect(self.check_root_route)
+
+    def check_root_route(self):
+        reply = self.sender()
+        status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+        reply.deleteLater()
+        if status != 200:
+            self.readiness_request_pending = False
+            return
+
+        request = QNetworkRequest(QUrl(f"http://127.0.0.1:{self.port}/"))
+        root_reply = self.network_manager.get(request)
+        root_reply.finished.connect(self.load_dashboard)
+
+    def load_dashboard(self):
+        reply = self.sender()
+        status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+        reply.deleteLater()
+        self.readiness_request_pending = False
+        if status == 200:
             self.check_timer.stop()
             self.browser.setUrl(QUrl(f"http://127.0.0.1:{self.port}"))
 
@@ -132,6 +148,6 @@ if __name__ == "__main__":
         raise SystemExit
 
     app = QApplication(sys.argv)
-    window = StreamlitWindow(find_free_port())
+    window = StreamlitWindow(PORT)
     window.show()
     sys.exit(app.exec())
