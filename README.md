@@ -195,7 +195,7 @@ Release builds are published when a tag such as `v1.2.0` is pushed. Download the
 gh release download v1.2.0
 ```
 
-Linux releases include `giftyfy-linux.tar.gz`, which contains the `giftyfy` CLI and `dashboard` executable. Windows releases include `giftyfy.exe` and `dashboard.exe`. macOS users should follow the manual setup instructions because the workflow does not publish a macOS binary.
+Linux releases include `giftyfy-linux.tar.gz`, which contains the `giftyfy` CLI, `dashboard` executable, and seeded `giftyfy.db`. Windows releases include `giftyfy-windows.zip`, containing `giftyfy.exe`, `dashboard.exe`, and the same seeded database. macOS users should follow the manual setup instructions because the workflow does not publish a macOS binary.
 
 ## Usage
 
@@ -217,6 +217,8 @@ chmod +x giftyfy dashboard
 ./giftyfy
 ```
 
+The archive also includes `giftyfy.db`, so no database generation step is required.
+
 Run the dashboard separately:
 
 ```bash
@@ -225,7 +227,7 @@ Run the dashboard separately:
 
 ### Downloaded Windows release
 
-Run `giftyfy.exe` for the native CLI, or run `dashboard.exe` separately for the desktop dashboard.
+Extract `giftyfy-windows.zip`, then run `giftyfy.exe` for the native CLI or `dashboard.exe` separately for the desktop dashboard. The extracted folder also contains the seeded `giftyfy.db`.
 
 ### Manual source setup
 

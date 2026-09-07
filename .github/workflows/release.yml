@@ -136,14 +136,7 @@ jobs:
             --add-data "assets;assets" `
             dashboard.py
 
-      # Preserve Linux executable permissions in the release archive.
-      - name: Package Linux native binary
-        if: matrix.platform == 'linux'
-        run: |
-          chmod +x giftyfy
-          tar -czf giftyfy-linux.tar.gz giftyfy
-
-      # Collect all Linux outputs under stable release asset names.
+      # Collect the Linux executables and seeded database under stable release asset names.
       - name: Prepare Linux artifacts
         if: matrix.platform == 'linux'
         run: |
@@ -151,20 +144,25 @@ jobs:
           mkdir -p linux-release
           cp dist/giftyfy linux-release/giftyfy
           cp dist/dashboard linux-release/dashboard
-          tar -czf giftyfy-linux.tar.gz -C linux-release giftyfy dashboard
+          cp giftyfy.db linux-release/giftyfy.db
+          chmod +x linux-release/giftyfy linux-release/dashboard
+          tar -czf giftyfy-linux.tar.gz -C linux-release giftyfy dashboard giftyfy.db
           cp giftyfy-linux.tar.gz release-assets/
           test -f release-assets/giftyfy-linux.tar.gz
 
-      # Collect all Windows outputs under stable release asset names.
+      # Collect the Windows executables and seeded database in one installable ZIP.
       - name: Prepare Windows artifacts
         if: matrix.platform == 'windows'
         shell: powershell
         run: |
+          New-Item -ItemType Directory -Force windows-release | Out-Null
+          Copy-Item dist\giftyfy.exe windows-release\giftyfy.exe
+          Copy-Item dist\dashboard.exe windows-release\dashboard.exe
+          Copy-Item giftyfy.db windows-release\giftyfy.db
+          Compress-Archive -Path windows-release\* -DestinationPath giftyfy-windows.zip -Force
           New-Item -ItemType Directory -Force release-assets | Out-Null
-          Copy-Item dist\giftyfy.exe release-assets\giftyfy.exe
-          Copy-Item dist\dashboard.exe release-assets\dashboard.exe
-          if (-not (Test-Path release-assets\giftyfy.exe)) { throw 'CLI artifact missing' }
-          if (-not (Test-Path release-assets\dashboard.exe)) { throw 'Dashboard artifact missing' }
+          Copy-Item giftyfy-windows.zip release-assets\giftyfy-windows.zip
+          if (-not (Test-Path release-assets\giftyfy-windows.zip)) { throw 'Windows archive missing' }
 
       # Upload platform-specific artifacts for the separate publish job.
       - name: Upload Linux artifacts
@@ -209,8 +207,7 @@ jobs:
       - name: Verify release artifacts
         run: |
           test -f dist/giftyfy-linux.tar.gz
-          test -f dist/giftyfy.exe
-          test -f dist/dashboard.exe
+          test -f dist/giftyfy-windows.zip
 
       # Create the release and ask GitHub to generate automated release notes.
       - name: Create GitHub Release
@@ -221,7 +218,6 @@ jobs:
           generate_release_notes: true
           files: |
             dist/giftyfy-linux.tar.gz
-            dist/giftyfy.exe
-            dist/dashboard.exe
+            dist/giftyfy-windows.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
