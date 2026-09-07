@@ -8,6 +8,26 @@ import streamlit
 streamlit_datas, streamlit_binaries, streamlit_hiddenimports = collect_all("streamlit")
 streamlit_static_path = os.path.join(os.path.dirname(streamlit.__file__), "static")
 
+# dashboard.py uses Qt WebEngine, but not Qt's QML/Quick stack. Excluding the
+# unused stack avoids an expensive and fragile hook traversal on Windows.
+qt_hiddenimports = [
+    "PyQt6.QtCore",
+    "PyQt6.QtGui",
+    "PyQt6.QtNetwork",
+    "PyQt6.QtWidgets",
+    "PyQt6.QtWebEngineCore",
+    "PyQt6.QtWebEngineWidgets",
+]
+qt_excludes = [
+    "PyQt6.QtQml",
+    "PyQt6.QtQmlModels",
+    "PyQt6.QtQmlWorkerScript",
+    "PyQt6.QtQuick",
+    "PyQt6.QtQuick3D",
+    "PyQt6.QtQuickControls2",
+    "PyQt6.QtQuickWidgets",
+]
+
 a = Analysis(
     ['dashboard.py'],
     pathex=[],
@@ -20,11 +40,11 @@ a = Analysis(
         ('assets/style.css', 'assets'),
         ('assets/templates.py', 'assets'),
     ],
-    hiddenimports=streamlit_hiddenimports,
+    hiddenimports=streamlit_hiddenimports + qt_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=qt_excludes,
     noarchive=False,
     optimize=0,
 )

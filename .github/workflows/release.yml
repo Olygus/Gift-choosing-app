@@ -32,14 +32,47 @@ jobs:
     steps:
       # Check out the C++, Python, database, and dashboard sources.
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Install the Linux compiler and SQLite development headers.
       - name: Install Linux build dependencies
         if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libsqlite3-dev
+          sudo apt-get install -y \
+            build-essential \
+            libsqlite3-dev \
+            libasound2 \
+            libdbus-1-3 \
+            libegl1 \
+            libfontconfig1 \
+            libfreetype6 \
+            libgl1 \
+            libglib2.0-0 \
+            libnss3 \
+            libopengl0 \
+            libpulse0 \
+            libx11-xcb1 \
+            libxcb-cursor0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-shape0 \
+            libxcb-shm0 \
+            libxcb-sync1 \
+            libxcb-util1 \
+            libxcb-xinerama0 \
+            libxcb-xkb1 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxi6 \
+            libxkbcommon0 \
+            libxkbcommon-x11-0 \
+            libxrandr2 \
+            libxtst6
 
       # Run the required native Linux compilation command.
       - name: Compile Linux binary
@@ -49,7 +82,7 @@ jobs:
       # Install Python and create an isolated environment for packaging.
       - name: Set up Linux Python environment
         if: matrix.platform == 'linux'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.x'
 
@@ -72,7 +105,7 @@ jobs:
       # Install Windows Python and create an isolated packaging environment.
       - name: Set up Windows Python environment
         if: matrix.platform == 'windows'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.x'
 
@@ -125,7 +158,7 @@ jobs:
         if: matrix.platform == 'windows'
         shell: powershell
         run: |
-          .venv\Scripts\pyinstaller.exe --noconfirm dashboard.spec
+          .venv\Scripts\pyinstaller.exe --clean --noconfirm dashboard.spec
 
       # Collect the Linux executables and seeded database under stable release asset names.
       - name: Prepare Linux artifacts
@@ -158,7 +191,7 @@ jobs:
       # Upload platform-specific artifacts for the separate publish job.
       - name: Upload Linux artifacts
         if: matrix.platform == 'linux'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: linux-release-assets
           path: release-assets
@@ -166,7 +199,7 @@ jobs:
 
       - name: Upload Windows artifacts
         if: matrix.platform == 'windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: windows-release-assets
           path: release-assets
@@ -183,7 +216,7 @@ jobs:
     steps:
       # Download both matrix artifacts into one directory.
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: artifacts
           merge-multiple: true
