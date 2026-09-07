@@ -11,6 +11,14 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 PORT = 8501
 
 
+def run_bundled_streamlit():
+    from streamlit.web import cli as streamlit_cli
+
+    script_path = sys.argv[2]
+    sys.argv = ["streamlit", "run", script_path, *sys.argv[3:]]
+    streamlit_cli.main()
+
+
 def is_port_open(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(("127.0.0.1", port)) == 0
@@ -41,14 +49,21 @@ class StreamlitWindow(QMainWindow):
         else:
             script_path = os.path.abspath("app.py")
 
+        streamlit_command = [
+            sys.executable,
+            "--run-streamlit",
+            script_path,
+            f"--server.port={PORT}",
+            "--server.headless=true",
+        ] if getattr(sys, "frozen", False) else [
+            "streamlit",
+            "run",
+            script_path,
+            f"--server.port={PORT}",
+            "--server.headless=true",
+        ]
         self.server_process = subprocess.Popen(
-            [
-                "streamlit",
-                "run",
-                script_path,
-                f"--server.port={PORT}",
-                "--server.headless=true",
-            ],
+            streamlit_command,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -73,6 +88,10 @@ class StreamlitWindow(QMainWindow):
 # def not_gonna_Kill_myself(python): removed as i finished the fkn python
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "--run-streamlit":
+        run_bundled_streamlit()
+        raise SystemExit
+
     app = QApplication(sys.argv)
     window = StreamlitWindow()
     window.show()
