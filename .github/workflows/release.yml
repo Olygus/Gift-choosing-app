@@ -5,6 +5,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 # Allow the workflow to create releases and upload assets.
 permissions:
@@ -118,23 +119,13 @@ jobs:
       - name: Package Linux dashboard executable
         if: matrix.platform == 'linux'
         run: |
-          .venv/bin/pyinstaller --onefile --noconsole --name dashboard \
-            --collect-all streamlit \
-            --add-data "app.py:." \
-            --add-data "giftyfy.db:." \
-            --add-data "assets:assets" \
-            dashboard.py
+          .venv/bin/pyinstaller --noconfirm dashboard.spec
 
       - name: Package Windows dashboard executable
         if: matrix.platform == 'windows'
         shell: powershell
         run: |
-          .venv\Scripts\pyinstaller.exe --onefile --noconsole --name dashboard `
-            --collect-all streamlit `
-            --add-data "app.py;." `
-            --add-data "giftyfy.db;." `
-            --add-data "assets;assets" `
-            dashboard.py
+          .venv\Scripts\pyinstaller.exe --noconfirm dashboard.spec
 
       # Collect the Linux executables and seeded database under stable release asset names.
       - name: Prepare Linux artifacts
@@ -184,6 +175,7 @@ jobs:
   publish:
     name: Create Release and Publish Assets
     needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
