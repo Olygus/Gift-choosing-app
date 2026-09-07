@@ -374,12 +374,14 @@ Notes:
 
 ### Package the dashboard with PyInstaller
 
-If you want to build a standalone dashboard launcher, install PyInstaller and package `dashboard.py`.
+If you want to build a standalone dashboard launcher, install PyInstaller and use the checked-in spec file. The spec collects Streamlit's package data and hidden imports; invoking PyInstaller directly without those collections produces a blank dashboard window.
 
 ```bash
-pip install pyinstaller
-pyinstaller --noconsole --onefile --name dashboard --add-data "app.py:." --add-data "giftyfy.db:." --add-data "assets/logo.png:assets" --add-data "assets/style.css:assets" --add-data "assets/templates.py:assets" dashboard.py
+python -m pip install pyinstaller
+python -m PyInstaller --clean dashboard.spec
 ```
+
+On Windows, use the same command from the activated environment; the spec file handles the platform-specific packaging details.
 
 Then launch it from the `dist` folder:
 
@@ -391,7 +393,7 @@ If you have trouble with PyInstaller, make sure your Python environment is activ
 
 ## Troubleshooting
 
-- **PyInstaller data files missing:** use `:` between source and destination on Linux/macOS and `;` on Windows.
+- **PyInstaller data files missing:** build with `python -m PyInstaller --clean dashboard.spec`; this includes Streamlit's package data as well as the dashboard files.
 - **Virtual environment activation fails:** Linux/macOS uses `source .venv/bin/activate`; PowerShell uses `.\\.venv\\Scripts\\Activate.ps1`.
 - **PEP 668 errors:** activate `.venv` and use `python -m pip`; use `pacman` for Arch system packages.
 - **Missing SQLite headers:** install `libsqlite3-dev` on Debian/Ubuntu or `sqlite` and `base-devel` on Arch.
