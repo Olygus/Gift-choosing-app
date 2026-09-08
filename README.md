@@ -400,7 +400,7 @@ If you have trouble with PyInstaller, make sure your Python environment is activ
 
 ## Screenshots
 
-The screenshots below use the captured images in the `img/` folder.
+The screenshots below use the captured images in the `assets/` folder.
 
 | Dashboard home | Items view |
 | --- | --- |
