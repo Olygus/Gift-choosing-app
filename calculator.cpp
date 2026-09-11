@@ -80,7 +80,9 @@ void setTerminalBackground(int r, int g, int b) {
     std::cout << bg << "\033[2J\033[H" << std::flush;
 }
 
-std::string readMaskedInput(const std::string& prompt) {
+const std::string CANCEL_INPUT = "__GIFTYFY_CANCEL__";
+
+std::string readMaskedInput(const std::string& prompt, bool allow_cancel = false) {
     std::string input;
     std::cout << prompt << ": ";
 
@@ -89,6 +91,9 @@ std::string readMaskedInput(const std::string& prompt) {
 
         if (ch == 10 || ch == 13) {
             std::cout << std::endl;
+            if (allow_cancel && (input == "X" || input == "x")) {
+                return CANCEL_INPUT;
+            }
             break;
         }
 
@@ -107,6 +112,31 @@ std::string readMaskedInput(const std::string& prompt) {
     }
 
     return input;
+}
+
+bool isCancelInput(const std::string& input) {
+    return input == "X" || input == "x" || input == CANCEL_INPUT;
+}
+
+void confirmApplicationExit() {
+    std::string confirmation;
+    while (true) {
+        std::cout << "Are you sure you want to exit? (y/n): ";
+        std::getline(std::cin, confirmation);
+
+        if (confirmation == "y" || confirmation == "Y") {
+            std::cout << "Thank you for using Giftyfy. Goodbye!" << std::endl;
+            exit(0);
+        }
+
+        if (confirmation == "n" || confirmation == "N") {
+            std::cout << "Exit cancelled. Press Enter to continue: ";
+            std::getline(std::cin, confirmation);
+            return;
+        }
+
+        std::cout << "Please enter y or n." << std::endl;
+    }
 }
 
 void clearScreen() {
@@ -1055,8 +1085,15 @@ UserAccount promptForSignIn() {
     while (!authenticated && attempts < MAX_ATTEMPTS) {
         std::cout << "Enter username: ";
         std::getline(std::cin, username);
+        if (isCancelInput(username)) {
+            return user;
+        }
         
-        password = readMaskedInput("Enter password");
+        password = readMaskedInput("Enter password", true);
+        if (isCancelInput(password)) {
+            clearScreen();
+            return user;
+        }
         
         user = authenticateUser(username, password);
         
@@ -1094,6 +1131,10 @@ UserAccount promptForSignUp() {
     while (!username_valid) {
         std::cout << "Enter username: ";
         std::getline(std::cin, username);
+        if (isCancelInput(username)) {
+            clearScreen();
+            return user;
+        }
         
         if (username.length() < 3) {
             std::cout << "Error: at least 3 characters (letters, numbers, special characters)" << std::endl;
@@ -1108,18 +1149,30 @@ UserAccount promptForSignUp() {
     while (!email_valid) {
         std::cout << "Enter email: ";
         std::getline(std::cin, email);
+        if (isCancelInput(email)) {
+            clearScreen();
+            return user;
+        }
         email_valid = isValidEmail(email);
     }
     
     bool password_valid = false;
     while (!password_valid) {
-        password = readMaskedInput("Enter password");
+        password = readMaskedInput("Enter password", true);
+        if (isCancelInput(password)) {
+            clearScreen();
+            return user;
+        }
         password_valid = isValidPassword(password);
     }
     
     bool password_match = false;
     while (!password_match) {
-        confirm_password = readMaskedInput("Confirm password");
+        confirm_password = readMaskedInput("Confirm password", true);
+        if (isCancelInput(confirm_password)) {
+            clearScreen();
+            return user;
+        }
         
         if (password == confirm_password) {
             password_match = true;
@@ -1165,8 +1218,7 @@ UserAccount handleAuthentication() {
             clearScreen();
             user = promptForSignUp();
         } else if (choice == "X" || choice == "x") {
-            std::cout << "Thank you for using Giftyfy. Goodbye!" << std::endl;
-            exit(0);
+            confirmApplicationExit();
         } else {
             clearScreen();
             std::cout << "Invalid option. Please try again." << std::endl << std::endl;
@@ -1625,8 +1677,7 @@ UserProfile selectOrCreateProfile(int user_id, UserAccount &user) {
         std::getline(std::cin, choice);
         
         if (choice == "X" || choice == "x") {
-            std::cout << "Thank you for using Giftyfy. Goodbye!" << std::endl;
-            exit(0);
+            confirmApplicationExit();
         } else if (choice == "L" || choice == "l") {
             UserProfile empty;
             empty.profile_id = -1;
@@ -2055,7 +2106,7 @@ void runAdminQueryConsole(const UserAccount& user) {
             clearScreen();
             return;
         } else if (choice == "X" || choice == "x") {
-            exit(0);
+            confirmApplicationExit();
         } else {
             std::cout << "Invalid option. Please try again." << std::endl;
             std::cout << "Press Enter to continue: ";
@@ -2097,7 +2148,7 @@ void runAdminSqlConsole(const UserAccount& user) {
             clearScreen();
             return;
         } else if (choice == "X" || choice == "x") {
-            exit(0);
+            confirmApplicationExit();
         } else {
             std::cout << "Invalid option. Please try again." << std::endl;
             std::cout << "Press Enter to continue: ";
@@ -2129,7 +2180,7 @@ void runAdminConsole(const UserAccount& user) {
             clearScreen();
             return;
         } else if (choice == "X" || choice == "x") {
-            exit(0);
+            confirmApplicationExit();
         } else {
             std::cout << "Invalid option. Please try again." << std::endl;
             std::cout << "Press Enter to continue: ";
@@ -2222,7 +2273,7 @@ void runUserSession(UserAccount current_user) {
         } else if (choice == "L" || choice == "l") {
             return;
         } else if (choice == "X" || choice == "x") {
-            exit(0);
+            confirmApplicationExit();
         } else {
             std::cout << "Invalid option. Please try again." << std::endl;
             std::cout << "Press Enter to continue: ";

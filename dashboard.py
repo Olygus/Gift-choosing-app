@@ -6,7 +6,7 @@ import subprocess
 import socket
 from PyQt6.QtCore import QUrl, QTimer
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest
-from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QVBoxLayout, QWidget
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 IS_FROZEN = getattr(sys, "_MEIPASS", None) is not None
@@ -37,6 +37,15 @@ def run_bundled_streamlit(port):
         "server.address": "127.0.0.1",
         "server.port": port,
         "server.headless": True,
+        "theme.base": "dark",
+        "theme.primaryColor": "#06d6a0",
+        "theme.backgroundColor": "#111827",
+        "theme.secondaryBackgroundColor": "#1f2937",
+        "theme.textColor": "#f9fafb",
+        "theme.sidebar.primaryColor": "#06d6a0",
+        "theme.sidebar.backgroundColor": "#111827",
+        "theme.sidebar.secondaryBackgroundColor": "#1f2937",
+        "theme.sidebar.textColor": "#f9fafb",
     }
     config._main_script_path = os.path.abspath(script_path)
     bootstrap.load_config_options(flag_options=flag_options)
@@ -50,6 +59,9 @@ class StreamlitWindow(QMainWindow):
         self.setWindowTitle("Dashboard")
         self.resize(1200, 800)
 
+        self.loading_widget = self.create_loading_widget()
+        self.setCentralWidget(self.loading_widget)
+
         self.browser = QWebEngineView()
         self.browser.setContextMenuPolicy(
             sys.modules["PyQt6.QtCore"].Qt.ContextMenuPolicy.NoContextMenu
@@ -61,7 +73,7 @@ class StreamlitWindow(QMainWindow):
 
         container = QWidget()
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        self.browser_container = container
 
         # PyInstaller path resolution for app.py
         if IS_FROZEN:
@@ -76,6 +88,15 @@ class StreamlitWindow(QMainWindow):
             f"--server.port={port}",
             "--server.address=127.0.0.1",
             "--server.headless=true",
+            "--theme.base=dark",
+            "--theme.primaryColor=#06d6a0",
+            "--theme.backgroundColor=#111827",
+            "--theme.secondaryBackgroundColor=#1f2937",
+            "--theme.textColor=#f9fafb",
+            "--theme.sidebar.primaryColor=#06d6a0",
+            "--theme.sidebar.backgroundColor=#111827",
+            "--theme.sidebar.secondaryBackgroundColor=#1f2937",
+            "--theme.sidebar.textColor=#f9fafb",
         ] if IS_FROZEN else [
             sys.executable,
             "-m",
@@ -85,6 +106,15 @@ class StreamlitWindow(QMainWindow):
             f"--server.port={port}",
             "--server.address=127.0.0.1",
             "--server.headless=true",
+            "--theme.base=dark",
+            "--theme.primaryColor=#06d6a0",
+            "--theme.backgroundColor=#111827",
+            "--theme.secondaryBackgroundColor=#1f2937",
+            "--theme.textColor=#f9fafb",
+            "--theme.sidebar.primaryColor=#06d6a0",
+            "--theme.sidebar.backgroundColor=#111827",
+            "--theme.sidebar.secondaryBackgroundColor=#1f2937",
+            "--theme.sidebar.textColor=#f9fafb",
         ]
         self.server_process = subprocess.Popen(
             streamlit_command,
@@ -97,6 +127,55 @@ class StreamlitWindow(QMainWindow):
         self.check_timer = QTimer()  # replacement for time.time(), who tf names these
         self.check_timer.timeout.connect(self.check_server_ready)
         self.check_timer.start(100)
+
+    def create_loading_widget(self):
+        loading_widget = QWidget()
+        loading_widget.setStyleSheet(
+            """
+            QWidget {
+                background-color: #111827;
+            }
+            QLabel#loading_title {
+                color: #f9fafb;
+                font-size: 28px;
+                font-weight: 700;
+            }
+            QLabel#loading_subtitle {
+                color: #9ca3af;
+                font-size: 15px;
+            }
+            QLabel#skeleton {
+                background: #263244;
+                border: none;
+                min-height: 18px;
+            }
+            QLabel#skeleton_wide {
+                background: #263244;
+                border: none;
+                min-height: 120px;
+            }
+            """
+        )
+
+        layout = QVBoxLayout(loading_widget)
+        layout.setContentsMargins(72, 64, 72, 64)
+        layout.setSpacing(18)
+
+        title = QLabel("Giftyfy")
+        title.setObjectName("loading_title")
+        subtitle = QLabel("Starting dashboard...")
+        subtitle.setObjectName("loading_subtitle")
+        layout.addWidget(title)
+        layout.addWidget(subtitle)
+        layout.addSpacing(18)
+
+        for index in range(3):
+            placeholder = QLabel()
+            placeholder.setObjectName("skeleton_wide" if index == 0 else "skeleton")
+            layout.addWidget(placeholder)
+
+        layout.addStretch()
+        return loading_widget
 
     def check_server_ready(self):
         if self.readiness_request_pending:
@@ -127,6 +206,7 @@ class StreamlitWindow(QMainWindow):
         self.readiness_request_pending = False
         if status == 200:
             self.check_timer.stop()
+            self.setCentralWidget(self.browser_container)
             self.browser.setUrl(QUrl(f"http://127.0.0.1:{self.port}"))
 
     def closeEvent(self, event):

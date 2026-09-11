@@ -7,10 +7,12 @@ from __future__ import annotations
 
 # import os
 import sqlite3
+import shutil
 import sys
 from contextlib import closing
 from pathlib import Path
 import os
+
 # from typing import Iterable, Sequence
 import pandas as pd
 import plotly.express as px
@@ -25,7 +27,25 @@ from assets.templates import (
 
 APP_TITLE = "Giftyfy"
 APP_SUBTITLE = "Gift choosing assistant"
-DEFAULT_DB_PATH = Path(__file__).with_name("giftyfy.db")
+
+
+def get_default_db_path() -> Path:
+    if getattr(sys, "_MEIPASS", None) is not None:
+        external_path = Path(sys.executable).resolve().parent / "giftyfy.db"
+        if external_path.exists():
+            return external_path
+        bundled_path = Path(sys._MEIPASS) / "giftyfy.db"
+        if bundled_path.exists():
+            try:
+                shutil.copy2(bundled_path, external_path)
+                return external_path
+            except OSError:
+                return bundled_path
+        return external_path
+    return Path(__file__).with_name("giftyfy.db")
+
+
+DEFAULT_DB_PATH = get_default_db_path()
 NAV_PAGES = ("Home", "Dashboard", "Items", "Tables")
 SCHEMA_DISPLAY_NAMES = {
     "users_login": "Users",
@@ -51,7 +71,24 @@ def apply_global_style() -> None:
 
 
 def ensure_streamlit_dark_theme() -> None:
-    return None
+    try:
+        from streamlit import config
+
+        theme_options = {
+            "theme.base": "dark",
+            "theme.primaryColor": "#06d6a0",
+            "theme.backgroundColor": "#111827",
+            "theme.secondaryBackgroundColor": "#1f2937",
+            "theme.textColor": "#f9fafb",
+            "theme.sidebar.primaryColor": "#06d6a0",
+            "theme.sidebar.backgroundColor": "#111827",
+            "theme.sidebar.secondaryBackgroundColor": "#1f2937",
+            "theme.sidebar.textColor": "#f9fafb",
+        }
+        for option_name, option_value in theme_options.items():
+            config.set_option(option_name, option_value)
+    except (ImportError, RuntimeError):
+        pass
 
 
 TABLE_NAMES = ("users_login", "user_profiles", "items", "sales")
@@ -184,7 +221,44 @@ def connect_db(db_path: Path) -> sqlite3.Connection:
     return connection
 
 
-@st.cache_data(show_spinner=False)
+def authenticate_admin(db_path: Path, username: str, password: str) -> bool:
+    try:
+        with closing(connect_db(db_path)) as connection:
+            row = connection.execute(
+                """
+                SELECT 1
+                FROM users_login
+                WHERE username_ = ? AND password_ = ? AND is_admin = 1
+                LIMIT 1
+                """,
+                (username, password),
+            ).fetchone()
+            return row is not None
+    except sqlite3.Error:
+        return False
+
+
+def render_admin_login(db_path: Path) -> None:
+    st.markdown('<div class="hero-title">ADMIN ACCESS</div>', unsafe_allow_html=True)
+    st.info(
+        "Sign in with an administrator account to unlock the dashboard. If you have not changed the password yet, check the README.md for instructions on how to."
+    )
+
+    username = st.text_input("Username", key="admin_username")
+    password = st.text_input("Password", type="password", key="admin_password")
+    submitted = st.button("Unlock dashboard", key="unlock_dashboard")
+
+    if submitted:
+        if authenticate_admin(db_path, username, password):
+            st.session_state["admin_authenticated"] = True
+            st.session_state["authenticated_db_path"] = str(
+                db_path.expanduser().resolve()
+            )
+            st.rerun()
+        st.error("Invalid administrator credentials.")
+
+
+@st.cache_data(show_spinner=False, ttl=5)
 def fetch_dataframe(
     db_path_str: str, query: str, params: Sequence[object] | None = None
 ) -> pd.DataFrame:
@@ -193,7 +267,7 @@ def fetch_dataframe(
         return pd.read_sql_query(query, connection, params=params or ())
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def fetch_scalar(
     db_path_str: str,
     query: str,
@@ -210,7 +284,7 @@ def fetch_scalar(
         return float(value if value is not None else default)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def table_row_count(db_path_str: str, table_name: str) -> int:
     return int(
         fetch_scalar(db_path_str, f"SELECT COUNT(*) FROM {table_name}", default=0)
@@ -220,7 +294,7 @@ def table_row_count(db_path_str: str, table_name: str) -> int:
 # return connection.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0], tried doing table_row now table_row_count as inlne but it kept throwing an error, screw it and this sh***********
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def get_users_summary(db_path_str: str) -> pd.DataFrame:
     query = """
         SELECT
@@ -237,7 +311,7 @@ def get_users_summary(db_path_str: str) -> pd.DataFrame:
     return fetch_dataframe(db_path_str, query)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def get_profile_summary(db_path_str: str) -> pd.DataFrame:
     query = """
         SELECT
@@ -262,7 +336,7 @@ def get_profile_summary(db_path_str: str) -> pd.DataFrame:
     return fetch_dataframe(db_path_str, query)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def get_items_summary(
     db_path_str: str, item_id: int | None = None, item_name: str = ""
 ) -> pd.DataFrame:
@@ -291,7 +365,7 @@ def get_items_summary(
     return fetch_dataframe(db_path_str, query, params)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def get_sales_summary(db_path_str: str) -> pd.DataFrame:
     # yeah this is masically same as the last 2 iterations but i cant be asked to make generic, if you read this do it or you will regret it later
     query = """
@@ -314,7 +388,7 @@ def get_sales_summary(db_path_str: str) -> pd.DataFrame:
     return fetch_dataframe(db_path_str, query)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def get_item_score_averages(
     db_path_str: str,
 ) -> pd.Series:  # no return type here, this i
@@ -327,7 +401,7 @@ def get_item_score_averages(
     )
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def get_sold_item_score_averages(db_path_str: str) -> pd.Series:
     query = f"""
         SELECT {", ".join(f"AVG(i.{field}) AS {field}" for field in SCORE_FIELDS)}
@@ -342,7 +416,7 @@ def get_sold_item_score_averages(db_path_str: str) -> pd.Series:
     )
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def get_sales_by_retailer(db_path_str: str) -> pd.DataFrame:
     query = """
         SELECT retailer_name, COUNT(*) AS sale_count
@@ -354,7 +428,7 @@ def get_sales_by_retailer(db_path_str: str) -> pd.DataFrame:
     return fetch_dataframe(db_path_str, query)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def get_sales_price_bands(db_path_str: str) -> pd.DataFrame:
     query = """
         WITH ranked AS (
@@ -379,13 +453,13 @@ def get_sales_price_bands(db_path_str: str) -> pd.DataFrame:
     return fetch_dataframe(db_path_str, query)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def get_table_schema(db_path_str: str, table_name: str) -> pd.DataFrame:
     query = f"PRAGMA table_info({table_name})"
     return fetch_dataframe(db_path_str, query)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def get_table_preview(
     db_path_str: str, table_name: str, limit: int = 25
 ) -> pd.DataFrame:
@@ -393,24 +467,24 @@ def get_table_preview(
     return fetch_dataframe(db_path_str, query)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def get_metric_counts(db_path_str: str) -> dict[str, int]:
     return {table: table_row_count(db_path_str, table) for table in TABLE_NAMES}
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def get_profile_names(db_path_str: str) -> pd.DataFrame:
     query = "SELECT profile_id, name_, user_id FROM user_profiles ORDER BY profile_id"
     return fetch_dataframe(db_path_str, query)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def get_user_lookup(db_path_str: str) -> pd.DataFrame:
     query = "SELECT user_id, username_ FROM users_login ORDER BY user_id"
     return fetch_dataframe(db_path_str, query)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=5)
 def get_item_names(db_path_str: str) -> pd.DataFrame:
     query = "SELECT item_id, item_name FROM items ORDER BY item_name"
     return fetch_dataframe(db_path_str, query)
@@ -439,6 +513,11 @@ def render_sidebar() -> str:
         help="Defaults to giftyfy.db beside app.py",
     )
     st.session_state["db_path"] = db_override
+    if st.session_state.get("admin_authenticated"):
+        if st.sidebar.button("Lock dashboard", key="lock_dashboard"):
+            st.session_state["admin_authenticated"] = False
+            st.session_state.pop("authenticated_db_path", None)
+            st.rerun()
     return page
 
 
@@ -867,27 +946,8 @@ def render_not_found_state(db_path: Path) -> None:
     )
 
 
-def main() -> None:
-    ensure_streamlit_dark_theme()
-    st.set_page_config(
-        page_title=APP_TITLE,
-        page_icon="🎁",
-        layout="wide",
-        initial_sidebar_state="expanded",
-    )
-    apply_global_style()
-    page = render_sidebar()
-    db_path = get_db_path()
-
-    st.markdown(
-        f"""
-        <div style="text-align:center; margin-bottom: 0.4rem; color: var(--accent); font-size: 1.1rem; font-weight: 700;">
-            {APP_SUBTITLE}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
+@st.fragment(run_every="5s")
+def render_current_page(page: str, db_path: Path) -> None:
     if not db_exists(db_path):
         render_not_found_state(db_path)
         return
@@ -907,6 +967,43 @@ def main() -> None:
         st.error(f"SQLite error while loading {page.lower()} view: {exc}")
     except Exception as exc:  # noqa: BLE001
         st.error(f"Unexpected error while rendering {page.lower()} view: {exc}")
+
+
+def main() -> None:
+    ensure_streamlit_dark_theme()
+    st.set_page_config(
+        page_title=APP_TITLE,
+        page_icon="🎁",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+    apply_global_style()
+    page = render_sidebar()
+    db_path = get_db_path()
+
+    if not db_exists(db_path):
+        render_not_found_state(db_path)
+        return
+
+    resolved_db_path = str(db_path.expanduser().resolve())
+    if (
+        not st.session_state.get("admin_authenticated")
+        or st.session_state.get("authenticated_db_path") != resolved_db_path
+    ):
+        st.session_state["admin_authenticated"] = False
+        render_admin_login(db_path)
+        return
+
+    st.markdown(
+        f"""
+        <div style="text-align:center; margin-bottom: 0.4rem; color: var(--accent); font-size: 1.1rem; font-weight: 700;">
+            {APP_SUBTITLE}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    render_current_page(page, db_path)
 
 
 # now you can take your keyboard out you ass, the pyhton shitshow is over

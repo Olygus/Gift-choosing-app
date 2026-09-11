@@ -265,7 +265,7 @@ python db-generate-sample.py giftyfy.db
 
 ## Configuration
 
-- The default database path is defined in [app.py](app.py) as `giftyfy.db` beside the script.
+- The source dashboard uses `giftyfy.db` beside [app.py](app.py). Packaged dashboards use the writable `giftyfy.db` beside the dashboard executable, falling back to the bundled seed database when no external file exists.
 - The console app uses the same default SQLite file through [calculator.cpp](calculator.cpp).
 - Default admin credentials and fallback seed values are also defined in [calculator.cpp](calculator.cpp) and can be updated before rebuilding.
 - Dashboard styling comes from [assets/style.css](assets/style.css), and shared Streamlit fragments live in [assets/templates.py](assets/templates.py).
@@ -289,13 +289,15 @@ The console app also contains an SQL fallback line for the default admin account
 
 Update that SQL string to match your new admin username, password, and email if you want the fallback to use your own values.
 
-For the Streamlit dashboard, the default database file location is defined in [app.py](app.py):
+For the Streamlit dashboard, the source default database file location is defined in [app.py](app.py):
 
 ```python
 DEFAULT_DB_PATH = Path(__file__).with_name("giftyfy.db")
 ```
 
 That value is used by the DB path input field as the default location. To use a different database path, set `DEFAULT_DB_PATH` to another location such as `Path("/absolute/path/to/giftyfy.db")`, then restart Streamlit.
+
+The packaged dashboard checks for `giftyfy.db` beside `dashboard` or `dashboard.exe` first. Keep the database in that folder so changes made by the CLI are visible to the dashboard. The dashboard refreshes its current page every five seconds.
 
 ### Optional: Load sample data
 

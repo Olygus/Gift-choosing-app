@@ -299,6 +299,10 @@ section[data-testid="stSidebar"] div[data-testid="stImage"] img {
     border-color: rgba(255,255,255,0.14) !important;
 }
 
+[data-testid="InputInstructions"] {
+    display: none !important;
+}
+
 .stDataFrame,
 .stTable {
     border-radius: 1rem;
